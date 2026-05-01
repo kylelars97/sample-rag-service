@@ -9,3 +9,40 @@
 # https://docs.deno.com/runtime/reference/cli/coverage/
 coverage/
 *.lcov
+
+# TypeScript
+# Compiled JavaScript output
+dist/
+build/
+*.js
+*.js.map
+*.d.ts
+!*.config.js
+.tsbuildinfo
+
+# Node.js
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+.npm
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing
+.nyc_output/
+*.lcov
+test-results/
+
