@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { buildServer } from "../src/api/server.js";
+import { buildServer, startServer } from "../src/api/server.js";
 
 const mockRunRagQuery = vi.fn();
 vi.mock("../src/rag/query.js", () => ({
@@ -10,6 +10,15 @@ describe("buildServer", () => {
   it("buildServer_CreatesServer_ReturnsFastifyInstance", () => {
     const server = buildServer();
     expect(server).toBeDefined();
+  });
+});
+
+describe("startServer", () => {
+  it("startServer_ListensOnPort_ReturnsRunningServer", async () => {
+    const server = await startServer(0);
+    const address = server.addresses();
+    expect(address.length).toBeGreaterThan(0);
+    await server.close();
   });
 });
 

@@ -10,4 +10,6 @@ export const QDRANT_COLLECTION = process.env.QDRANT_COLLECTION ?? "facts";
 
 export const EMBEDDING_DIMENSION = 768;
 
+export const PORT = parseInt(process.env.PORT ?? "3000", 10);
+
 export const SEED_DATA_PATH = process.env.SEED_DATA_PATH ?? "data/glop.md";
