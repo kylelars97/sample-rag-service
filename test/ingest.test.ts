@@ -56,7 +56,7 @@ describe("runIngest", () => {
     expect(loadMarkdown).toHaveBeenCalledWith("custom/path.md");
   });
 
-  it("runIngest_CallsAllStages_InOrder", async () => {
+  it("runIngest_CallsAllStages_AllStagesInvoked", async () => {
     const { loadMarkdown } = await import("../src/ingest/markdownLoader.js");
     const { parseMarkdown } = await import("../src/ingest/markdownParser.js");
     const { extractFactsFromTree } = await import("../src/ingest/factExtractor.js");

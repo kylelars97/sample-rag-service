@@ -14,7 +14,7 @@ describe("buildServer", () => {
 });
 
 describe("GET / health check", () => {
-  it("healthCheck_ReturnsOk", async () => {
+  it("healthCheckEndpoint_SendsGetRequest_ReturnsStatusOk", async () => {
     const server = buildServer();
     const response = await server.inject({
       method: "GET",
