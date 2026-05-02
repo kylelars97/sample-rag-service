@@ -13,9 +13,7 @@ function hasChildren(node: Content): node is Content & NodeWithChildren {
 function collectTextChildren(children: readonly Content[]): string[] {
   const parts: string[] = [];
   for (const child of children) {
-    if (child.type === "text") {
-      parts.push(child.value);
-    } else if (child.type === "inlineCode") {
+    if (child.type === "text" || child.type === "inlineCode") {
       parts.push(child.value);
     } else if (hasChildren(child)) {
       parts.push(...collectTextChildren(child.children));
