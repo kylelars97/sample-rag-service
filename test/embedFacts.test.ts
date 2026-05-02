@@ -39,6 +39,16 @@ describe("embedText", () => {
     mockFetch.mockResolvedValueOnce({ ok: false, statusText: "Bad Request" });
     await expect(embedText("hello")).rejects.toThrow();
   });
+
+  it("embedText_MalformedJsonResponse_ThrowsError", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => {
+        throw new Error("Malformed JSON");
+      },
+    });
+    await expect(embedText("broken")).rejects.toThrow();
+  });
 });
 
 describe("embedFacts", () => {
@@ -81,15 +91,5 @@ describe("embedFacts", () => {
     expect(result[0].sourceSection).toBe("Intro");
     expect(result[0].tags).toEqual(["intro"]);
     expect(result[0].embedding).toEqual(fakeEmbedding);
-  });
-
-  it("embedText_MalformedJsonResponse_ThrowsError", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => {
-        throw new Error("Malformed JSON");
-      },
-    });
-    await expect(embedText("broken")).rejects.toThrow();
   });
 });
