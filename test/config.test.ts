@@ -1,48 +1,63 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { assertEquals } from "@std/assert";
+import {
+  OLLAMA_BASE_URL,
+  OLLAMA_CHAT_MODEL,
+  OLLAMA_EMBED_MODEL,
+  QDRANT_URL,
+  QDRANT_COLLECTION,
+  EMBEDDING_DIMENSION,
+  PORT,
+  SEED_DATA_PATH,
+} from "../src/config.ts";
 
-describe("config defaults", () => {
-  it("config_DefaultValues_ReturnsExpectedDefaults", async () => {
-    const { OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL, OLLAMA_EMBED_MODEL, QDRANT_URL, QDRANT_COLLECTION, EMBEDDING_DIMENSION, PORT, SEED_DATA_PATH } = await import("../src/config.js");
-    expect(OLLAMA_BASE_URL).toBe("http://localhost:11434");
-    expect(OLLAMA_CHAT_MODEL).toBe("llama3");
-    expect(OLLAMA_EMBED_MODEL).toBe("nomic-embed-text");
-    expect(QDRANT_URL).toBe("http://localhost:6333");
-    expect(QDRANT_COLLECTION).toBe("facts");
-    expect(EMBEDDING_DIMENSION).toBe(768);
-    expect(PORT).toBe(3000);
-    expect(SEED_DATA_PATH).toBe("data/glop.md");
-  });
+Deno.test("config_DefaultValues_ReturnsExpectedDefaults", () => {
+  assertEquals(OLLAMA_BASE_URL, "http://localhost:11434");
+  assertEquals(OLLAMA_CHAT_MODEL, "llama3");
+  assertEquals(OLLAMA_EMBED_MODEL, "nomic-embed-text");
+  assertEquals(QDRANT_URL, "http://localhost:6333");
+  assertEquals(QDRANT_COLLECTION, "facts");
+  assertEquals(EMBEDDING_DIMENSION, 768);
+  assertEquals(PORT, 3000);
+  assertEquals(SEED_DATA_PATH, "data/glop.md");
 });
 
-describe("config environment overrides", () => {
-  const originals: Record<string, string | undefined> = {};
+Deno.test("config_EnvOverrides_ReturnsOverriddenValues", async () => {
+  const originalOllama = Deno.env.get("OLLAMA_BASE_URL");
+  const originalChat = Deno.env.get("OLLAMA_CHAT_MODEL");
+  const originalPort = Deno.env.get("PORT");
+  const originalSeed = Deno.env.get("SEED_DATA_PATH");
 
-  beforeEach(() => {
-    for (const key of ["OLLAMA_BASE_URL", "OLLAMA_CHAT_MODEL", "OLLAMA_EMBED_MODEL", "QDRANT_URL", "QDRANT_COLLECTION", "PORT", "SEED_DATA_PATH"]) {
-      originals[key] = process.env[key];
+  Deno.env.set("OLLAMA_BASE_URL", "http://custom:11434");
+  Deno.env.set("OLLAMA_CHAT_MODEL", "custom-model");
+  Deno.env.set("PORT", "4000");
+  Deno.env.set("SEED_DATA_PATH", "data/custom.md");
+
+  try {
+    const mod = await import("../src/config.ts?_t=" + Date.now());
+    assertEquals(mod.OLLAMA_BASE_URL, "http://custom:11434");
+    assertEquals(mod.OLLAMA_CHAT_MODEL, "custom-model");
+    assertEquals(mod.PORT, 4000);
+    assertEquals(mod.SEED_DATA_PATH, "data/custom.md");
+  } finally {
+    if (originalOllama !== undefined) {
+      Deno.env.set("OLLAMA_BASE_URL", originalOllama);
+    } else {
+      Deno.env.delete("OLLAMA_BASE_URL");
     }
-  });
-
-  afterEach(() => {
-    for (const [key, val] of Object.entries(originals)) {
-      if (val === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = val;
-      }
+    if (originalChat !== undefined) {
+      Deno.env.set("OLLAMA_CHAT_MODEL", originalChat);
+    } else {
+      Deno.env.delete("OLLAMA_CHAT_MODEL");
     }
-  });
-
-  it("config_EnvOverrides_ReturnsOverriddenValues", async () => {
-    process.env.OLLAMA_BASE_URL = "http://custom:11434";
-    process.env.OLLAMA_CHAT_MODEL = "custom-model";
-    process.env.PORT = "4000";
-    process.env.SEED_DATA_PATH = "data/custom.md";
-    vi.resetModules();
-    const config = await import("../src/config.js");
-    expect(config.OLLAMA_BASE_URL).toBe("http://custom:11434");
-    expect(config.OLLAMA_CHAT_MODEL).toBe("custom-model");
-    expect(config.PORT).toBe(4000);
-    expect(config.SEED_DATA_PATH).toBe("data/custom.md");
-  });
+    if (originalPort !== undefined) {
+      Deno.env.set("PORT", originalPort);
+    } else {
+      Deno.env.delete("PORT");
+    }
+    if (originalSeed !== undefined) {
+      Deno.env.set("SEED_DATA_PATH", originalSeed);
+    } else {
+      Deno.env.delete("SEED_DATA_PATH");
+    }
+  }
 });

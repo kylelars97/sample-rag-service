@@ -1,51 +1,49 @@
-import { describe, it, expect } from "vitest";
-import { parseMarkdown } from "../src/ingest/markdownParser.js";
+import { assertEquals } from "@std/assert";
+import { parseMarkdown } from "../src/ingest/markdownParser.ts";
 
-describe("parseMarkdown", () => {
-  it("parseMarkdown_ParsesSimpleHeading_ReturnsTreeWithHeading", () => {
-    const md = "# Hello World";
-    const tree = parseMarkdown(md);
-    expect(tree.type).toBe("root");
-    expect(tree.children.length).toBeGreaterThan(0);
-  });
+Deno.test("parseMarkdown_ParsesSimpleHeading_ReturnsTreeWithHeading", () => {
+  const md = "# Hello World";
+  const tree = parseMarkdown(md);
+  assertEquals(tree.type, "root");
+  assertEquals(tree.children.length > 0, true);
+});
 
-  it("parseMarkdown_ParsesParagraphAndHeading_ReturnsBothNodes", () => {
-    const md = "# Title\n\nSome paragraph text.";
-    const tree = parseMarkdown(md);
-    expect(tree.type).toBe("root");
-    expect(tree.children.length).toBeGreaterThanOrEqual(2);
-  });
+Deno.test("parseMarkdown_ParsesParagraphAndHeading_ReturnsBothNodes", () => {
+  const md = "# Title\n\nSome paragraph text.";
+  const tree = parseMarkdown(md);
+  assertEquals(tree.type, "root");
+  assertEquals(tree.children.length >= 2, true);
+});
 
-  it("parseMarkdown_ParsesEmptyString_ReturnsEmptyRoot", () => {
-    const md = "";
-    const tree = parseMarkdown(md);
-    expect(tree.type).toBe("root");
-  });
+Deno.test("parseMarkdown_ParsesEmptyString_ReturnsEmptyRoot", () => {
+  const md = "";
+  const tree = parseMarkdown(md);
+  assertEquals(tree.type, "root");
+});
 
-  it("parseMarkdown_ParsesList_ReturnsListNode", () => {
-    const md = "- item one\n- item two";
-    const tree = parseMarkdown(md);
-    const hasList = tree.children.some((c) => c.type === "list");
-    expect(hasList).toBe(true);
-  });
+Deno.test("parseMarkdown_ParsesList_ReturnsListNode", () => {
+  const md = "- item one\n- item two";
+  const tree = parseMarkdown(md);
+  const hasList = tree.children.some((c) => c.type === "list");
+  assertEquals(hasList, true);
+});
 
-  it("parseMarkdown_ParsesInlineFormatting_ReturnsTextContent", () => {
-    const md = "This is **bold** and *italic* text.";
-    const tree = parseMarkdown(md);
-    expect(tree.children.length).toBeGreaterThan(0);
-  });
+Deno.test("parseMarkdown_ParsesInlineFormatting_ReturnsTextContent", () => {
+  const md = "This is **bold** and *italic* text.";
+  const tree = parseMarkdown(md);
+  assertEquals(tree.children.length > 0, true);
+});
 
-  it("parseMarkdown_ParsesHeadingsWithMultipleLevels_ReturnsAllHeadings", () => {
-    const md = "# H1\n\n## H2\n\n### H3\n\nContent.";
-    const tree = parseMarkdown(md);
-    const headings = tree.children.filter((c) => c.type === "heading");
-    expect(headings.length).toBe(3);
-  });
+Deno.test("parseMarkdown_ParsesHeadingsWithMultipleLevels_ReturnsAllHeadings", () => {
+  const md = "# H1\n\n## H2\n\n### H3\n\nContent.";
+  const tree = parseMarkdown(md);
+  const headings = tree.children.filter((c) => c.type === "heading");
+  assertEquals(headings.length, 3);
+});
 
-  it("parseMarkdown_ParsesNestedLists_ReturnsListStructure", () => {
-    const md = "- item one\n  - nested item\n- item two";
-    const tree = parseMarkdown(md);
-    const hasList = tree.children.some((c) => c.type === "list");
-    expect(hasList).toBe(true);
-  });
+Deno.test("parseMarkdown_ParsesNestedLists_ReturnsListStructure", () => {
+  const md = "- item one\n  - nested item\n- item two";
+  const tree = parseMarkdown(md);
+  const hasList = tree.children.some((c) => c.type === "list");
+  assertEquals(hasList, true);
 });

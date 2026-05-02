@@ -10,23 +10,6 @@
 coverage/
 *.lcov
 
-# TypeScript
-# Compiled JavaScript output
-dist/
-build/
-*.js
-*.js.map
-*.d.ts
-!*.config.js
-.tsbuildinfo
-
-# Node.js
-node_modules/
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
-.npm
-
 # Environment
 .env
 .env.local
@@ -42,7 +25,4 @@ yarn.lock
 Thumbs.db
 
 # Testing
-.nyc_output/
-*.lcov
 test-results/
-

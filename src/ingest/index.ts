@@ -1,9 +1,9 @@
-import { loadMarkdown } from "./markdownLoader.js";
-import { parseMarkdown } from "./markdownParser.js";
-import { extractFactsFromTree } from "./factExtractor.js";
-import { embedFacts } from "./embedFacts.js";
-import { indexFacts } from "./indexFacts.js";
-import { SEED_DATA_PATH } from "../config.js";
+import { loadMarkdown } from "./markdownLoader.ts";
+import { parseMarkdown } from "./markdownParser.ts";
+import { extractFactsFromTree } from "./factExtractor.ts";
+import { embedFacts } from "./embedFacts.ts";
+import { indexFacts } from "./indexFacts.ts";
+import { SEED_DATA_PATH } from "../config.ts";
 
 export async function runIngest(filePath: string = SEED_DATA_PATH): Promise<void> {
   const md = await loadMarkdown(filePath);

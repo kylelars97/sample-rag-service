@@ -1,7 +1,7 @@
-import { embedText } from "../ingest/embedFacts.js";
-import { searchFacts } from "./retrieve.js";
-import { generateAnswer } from "./generate.js";
-import type { QueryResult } from "../types.js";
+import { embedText } from "../ingest/embedFacts.ts";
+import { searchFacts } from "./retrieve.ts";
+import { generateAnswer } from "./generate.ts";
+import type { QueryResult } from "../types.ts";
 
 export async function runRagQuery(prompt: string): Promise<QueryResult> {
   const queryEmbedding = await embedText(prompt);

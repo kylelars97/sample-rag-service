@@ -2,15 +2,15 @@
 
 ## Project
 
-Sample RAG service — TypeScript source-of-truth (`.ts` files). Compiled `.js` is gitignored (except `*.config.js`). No runtime source files exist yet; the repo is a scaffold.
+Sample RAG service — TypeScript source-of-truth (`.ts` files). Runs on Deno with Deno.serve(), jsr: specifiers, and Deno's built-in test runner.
 
 ## Commands
 
 Before committing, always run in order:
 
 ```
-npm run typecheck
-npm run test
+deno check src/api/server.ts src/ingest/index.ts
+deno task test
 ```
 
 ## Sandcastle (`.sandcastle/`)

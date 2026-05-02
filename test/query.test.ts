@@ -1,76 +1,87 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { runRagQuery } from "../src/rag/query.js";
+import { assertEquals, assertRejects } from "@std/assert";
+import { stub } from "@std/testing/mock";
+import { runRagQuery } from "../src/rag/query.ts";
+import { _setQdrantClient } from "../src/vector/qdrantClient.ts";
 
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
-
-vi.mock("../src/vector/qdrantClient.js", () => ({
-  getQdrantClient: () => ({
-    search: vi.fn().mockResolvedValue([
-      { payload: { text: "GLOP is a planet." }, score: 0.95 },
-    ]),
-  }),
-  ensureCollection: vi.fn().mockResolvedValue(undefined),
-}));
-
-describe("runRagQuery", () => {
-  beforeEach(() => {
-    mockFetch.mockReset();
+Deno.test("runRagQuery_FullPipeline_ReturnsAnswerAndFacts", async () => {
+  const mockClient = {
+    search: () =>
+      Promise.resolve([{ payload: { text: "GLOP is a planet." }, score: 0.95 }]),
+  };
+  _setQdrantClient(mockClient as never);
+  let callCount = 0;
+  const fetchStub = stub(globalThis, "fetch", () => {
+    callCount++;
+    if (callCount === 1) {
+      return Promise.resolve(new Response(JSON.stringify({ embedding: new Array(768).fill(0.5) })));
+    }
+    return Promise.resolve(new Response(JSON.stringify({ response: "GLOP is a unified planetary system." })));
   });
-
-  it("runRagQuery_FullPipeline_ReturnsAnswerAndFacts", async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ embedding: new Array(768).fill(0.5) }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          response: "GLOP is a unified planetary system.",
-        }),
-      });
+  try {
     const result = await runRagQuery("What is GLOP?");
-    expect(result.facts.length).toBeGreaterThan(0);
-  });
+    assertEquals(result.facts.length > 0, true);
+  } finally {
+    fetchStub.restore();
+    _setQdrantClient(null);
+  }
+});
 
-  it("runRagQuery_EmbedFailure_ThrowsError", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      statusText: "Service Unavailable",
-    });
-    await expect(runRagQuery("What is GLOP?")).rejects.toThrow();
-  });
+Deno.test("runRagQuery_EmbedFailure_ThrowsError", async () => {
+  _setQdrantClient(null);
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(null, { status: 503, statusText: "Service Unavailable" })));
+  try {
+    await assertRejects(() => runRagQuery("What is GLOP?"));
+  } finally {
+    fetchStub.restore();
+    _setQdrantClient(null);
+  }
+});
 
-  it("runRagQuery_GenerationFailure_ThrowsError", async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ embedding: new Array(768).fill(0.5) }),
-      })
-      .mockResolvedValueOnce({
-        ok: false,
-        statusText: "Internal Server Error",
-      });
-    await expect(runRagQuery("What is GLOP?")).rejects.toThrow();
+Deno.test("runRagQuery_GenerationFailure_ThrowsError", async () => {
+  const mockClient = {
+    search: () =>
+      Promise.resolve([{ payload: { text: "GLOP is a planet." }, score: 0.95 }]),
+  };
+  _setQdrantClient(mockClient as never);
+  let callCount = 0;
+  const fetchStub = stub(globalThis, "fetch", () => {
+    callCount++;
+    if (callCount === 1) {
+      return Promise.resolve(new Response(JSON.stringify({ embedding: new Array(768).fill(0.5) })));
+    }
+    return Promise.resolve(new Response(null, { status: 500, statusText: "Internal Server Error" }));
   });
+  try {
+    await assertRejects(() => runRagQuery("What is GLOP?"));
+  } finally {
+    fetchStub.restore();
+    _setQdrantClient(null);
+  }
+});
 
-  it("runRagQuery_ReturnsResultWithCorrectShape", async () => {
-    mockFetch
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ embedding: new Array(768).fill(0.5) }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          response: "GLOP is a unified planetary system.",
-        }),
-      });
+Deno.test("runRagQuery_ReturnsResultWithCorrectShape", async () => {
+  const mockClient = {
+    search: () =>
+      Promise.resolve([{ payload: { text: "GLOP is a planet." }, score: 0.95 }]),
+  };
+  _setQdrantClient(mockClient as never);
+  let callCount = 0;
+  const fetchStub = stub(globalThis, "fetch", () => {
+    callCount++;
+    if (callCount === 1) {
+      return Promise.resolve(new Response(JSON.stringify({ embedding: new Array(768).fill(0.5) })));
+    }
+    return Promise.resolve(new Response(JSON.stringify({ response: "GLOP is a unified planetary system." })));
+  });
+  try {
     const result = await runRagQuery("What is GLOP?");
-    expect(result).toHaveProperty("answer");
-    expect(result).toHaveProperty("facts");
-    expect(typeof result.answer).toBe("string");
-    expect(Array.isArray(result.facts)).toBe(true);
-  });
+    assertEquals("answer" in result, true);
+    assertEquals("facts" in result, true);
+    assertEquals(typeof result.answer, "string");
+    assertEquals(Array.isArray(result.facts), true);
+  } finally {
+    fetchStub.restore();
+    _setQdrantClient(null);
+  }
 });

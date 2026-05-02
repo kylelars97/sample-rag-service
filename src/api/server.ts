@@ -1,23 +1,28 @@
-import Fastify from "fastify";
-import type { FastifyInstance } from "fastify";
-import { registerRoutes } from "./routes.js";
-import { PORT } from "../config.js";
+import { registerRoutes } from "./routes.ts";
+import { PORT } from "../config.ts";
 
-export function buildServer(): FastifyInstance {
-  const server = Fastify({ logger: false });
-  registerRoutes(server);
-  return server;
+export function createRouter(): Map<string, (req: Request) => Promise<Response>> {
+  const routes = new Map<string, (req: Request) => Promise<Response>>();
+  registerRoutes(routes);
+  return routes;
 }
 
-export async function startServer(port: number = PORT): Promise<FastifyInstance> {
-  const server = buildServer();
-  await server.listen({ port });
-  return server;
-}
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  startServer().then((server) => {
-    const address = server.addresses()[0];
-    console.log(`Server listening on ${address}`);
+export function startServer(port: number = PORT): void {
+  const router = createRouter();
+  Deno.serve({ port }, async (req: Request): Promise<Response> => {
+    const url = new URL(req.url);
+    const handler = router.get(`${req.method} ${url.pathname}`);
+    if (handler) {
+      return handler(req);
+    }
+    if (url.pathname === "/" && req.method === "GET") {
+      return Response.json({ status: "ok" });
+    }
+    return new Response("Not Found", { status: 404 });
   });
+}
+
+if (import.meta.main) {
+  startServer();
+  console.log(`Server listening on port ${PORT}`);
 }

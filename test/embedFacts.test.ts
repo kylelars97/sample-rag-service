@@ -1,95 +1,98 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { embedText, embedFacts } from "../src/ingest/embedFacts.js";
-import type { Fact, EmbeddedFact } from "../src/types.js";
+import { assertEquals, assertRejects } from "@std/assert";
+import { stub } from "@std/testing/mock";
+import { embedText, embedFacts } from "../src/ingest/embedFacts.ts";
+import type { Fact, EmbeddedFact } from "../src/types.ts";
 
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
-
-describe("embedText", () => {
-  beforeEach(() => {
-    mockFetch.mockReset();
-  });
-
-  it("embedText_CallsOllama_ReturnsEmbedding", async () => {
-    const fakeEmbedding = new Array(768).fill(0.1);
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ embedding: fakeEmbedding }),
-    });
+Deno.test("embedText_CallsOllama_ReturnsEmbedding", async () => {
+  const fakeEmbedding = new Array(768).fill(0.1);
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(JSON.stringify({ embedding: fakeEmbedding }))));
+  try {
     const result = await embedText("hello world");
-    expect(result).toEqual(fakeEmbedding);
-  });
-
-  it("embedText_SendsCorrectUrlAndModel_PostsToApi", async () => {
-    const fakeEmbedding = new Array(768).fill(0.1);
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ embedding: fakeEmbedding }),
-    });
-    await embedText("test input");
-    const callUrl = mockFetch.mock.calls[0][0] as string;
-    const callOpts = mockFetch.mock.calls[0][1] as RequestInit;
-    expect(callUrl).toBe("http://localhost:11434/api/embeddings");
-    const body = JSON.parse(callOpts.body as string);
-    expect(body.model).toBe("nomic-embed-text");
-    expect(body.prompt).toBe("test input");
-  });
-
-  it("embedText_FailedFetch_ThrowsError", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, statusText: "Bad Request" });
-    await expect(embedText("hello")).rejects.toThrow();
-  });
-
-  it("embedText_MalformedJsonResponse_ThrowsError", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => {
-        throw new Error("Malformed JSON");
-      },
-    });
-    await expect(embedText("broken")).rejects.toThrow();
-  });
+    assertEquals(result, fakeEmbedding);
+  } finally {
+    fetchStub.restore();
+  }
 });
 
-describe("embedFacts", () => {
-  beforeEach(() => {
-    mockFetch.mockReset();
+Deno.test("embedText_SendsCorrectUrlAndModel_PostsToApi", async () => {
+  const fakeEmbedding = new Array(768).fill(0.1);
+  let calledUrl = "";
+  let calledBody = "";
+  const fetchStub = stub(globalThis, "fetch", (_input: URL | RequestInfo, init?: RequestInit) => {
+    calledUrl = _input as string;
+    calledBody = init?.body as string;
+    return Promise.resolve(new Response(JSON.stringify({ embedding: fakeEmbedding })));
   });
+  try {
+    await embedText("test input");
+    assertEquals(calledUrl, "http://localhost:11434/api/embeddings");
+    const body = JSON.parse(calledBody);
+    assertEquals(body.model, "nomic-embed-text");
+    assertEquals(body.prompt, "test input");
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("embedFacts_MultipleFacts_ReturnsEmbeddedFacts", async () => {
-    const fakeEmbedding = new Array(768).fill(0.2);
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ embedding: fakeEmbedding }),
-    });
+Deno.test("embedText_FailedFetch_ThrowsError", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(null, { status: 400, statusText: "Bad Request" })));
+  try {
+    await assertRejects(() => embedText("hello"));
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("embedText_MalformedJsonResponse_ThrowsError", async () => {
+  const fetchStub = stub(globalThis, "fetch", () => {
+    throw new Error("Malformed JSON");
+  });
+  try {
+    await assertRejects(() => embedText("broken"));
+  } finally {
+    fetchStub.restore();
+  }
+});
+
+Deno.test("embedFacts_MultipleFacts_ReturnsEmbeddedFacts", async () => {
+  const fakeEmbedding = new Array(768).fill(0.2);
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(JSON.stringify({ embedding: fakeEmbedding }))));
+  try {
     const facts: readonly Fact[] = [
       { id: "1", text: "Fact one" },
       { id: "2", text: "Fact two" },
     ];
     const result: readonly EmbeddedFact[] = await embedFacts(facts);
-    expect(result.length).toBe(2);
-    expect(result[0].embedding).toEqual(fakeEmbedding);
-  });
+    assertEquals(result.length, 2);
+    assertEquals(result[0].embedding, fakeEmbedding);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("embedFacts_EmptyArray_ReturnsEmptyArray", async () => {
-    const result: readonly EmbeddedFact[] = await embedFacts([]);
-    expect(result).toEqual([]);
-  });
+Deno.test("embedFacts_EmptyArray_ReturnsEmptyArray", async () => {
+  const result: readonly EmbeddedFact[] = await embedFacts([]);
+  assertEquals(result, []);
+});
 
-  it("embedFacts_PreservesFactFields_ReturnsAllFields", async () => {
-    const fakeEmbedding = new Array(768).fill(0.3);
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ embedding: fakeEmbedding }),
-    });
+Deno.test("embedFacts_PreservesFactFields_ReturnsAllFields", async () => {
+  const fakeEmbedding = new Array(768).fill(0.3);
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(JSON.stringify({ embedding: fakeEmbedding }))));
+  try {
     const facts: readonly Fact[] = [
       { id: "1", text: "Fact one", sourceSection: "Intro", tags: ["intro"] },
     ];
     const result = await embedFacts(facts);
-    expect(result[0].id).toBe("1");
-    expect(result[0].text).toBe("Fact one");
-    expect(result[0].sourceSection).toBe("Intro");
-    expect(result[0].tags).toEqual(["intro"]);
-    expect(result[0].embedding).toEqual(fakeEmbedding);
-  });
+    assertEquals(result[0].id, "1");
+    assertEquals(result[0].text, "Fact one");
+    assertEquals(result[0].sourceSection, "Intro");
+    assertEquals(result[0].tags, ["intro"]);
+    assertEquals(result[0].embedding, fakeEmbedding);
+  } finally {
+    fetchStub.restore();
+  }
 });

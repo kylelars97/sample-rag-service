@@ -1,6 +1,6 @@
-import type { EmbeddedFact } from "../types.js";
-import { QDRANT_COLLECTION } from "../config.js";
-import { getQdrantClient, ensureCollection } from "../vector/qdrantClient.js";
+import type { EmbeddedFact } from "../types.ts";
+import { QDRANT_COLLECTION } from "../config.ts";
+import { getQdrantClient, ensureCollection } from "../vector/qdrantClient.ts";
 
 export async function indexFacts(facts: readonly EmbeddedFact[]): Promise<void> {
   await ensureCollection();

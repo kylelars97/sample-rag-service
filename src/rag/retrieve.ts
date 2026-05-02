@@ -1,5 +1,5 @@
-import { QDRANT_COLLECTION } from "../config.js";
-import { getQdrantClient } from "../vector/qdrantClient.js";
+import { QDRANT_COLLECTION } from "../config.ts";
+import { getQdrantClient } from "../vector/qdrantClient.ts";
 
 function extractFactText(payload: Record<string, unknown> | null | undefined): string {
   if (payload != null && typeof payload.text === "string") {

@@ -1,62 +1,70 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { generateAnswer } from "../src/rag/generate.js";
+import { assertEquals, assertRejects } from "@std/assert";
+import { stub } from "@std/testing/mock";
+import { generateAnswer } from "../src/rag/generate.ts";
 
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
-
-describe("generateAnswer", () => {
-  beforeEach(() => {
-    mockFetch.mockReset();
-  });
-
-  it("generateAnswer_WithFacts_ReturnsAnswer", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ response: "GLOP is a unified planetary system." }),
-    });
+Deno.test("generateAnswer_WithFacts_ReturnsAnswer", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(JSON.stringify({ response: "GLOP is a unified planetary system." }))));
+  try {
     const facts = ["GLOP is a unified planetary system."];
     const result = await generateAnswer("What is GLOP?", facts);
-    expect(result).toContain("GLOP");
-  });
+    assertEquals(result.includes("GLOP"), true);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("generateAnswer_FailedFetch_ThrowsError", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, statusText: "Server Error" });
-    await expect(
-      generateAnswer("What is GLOP?", ["fact"])
-    ).rejects.toThrow();
-  });
+Deno.test("generateAnswer_FailedFetch_ThrowsError", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(null, { status: 500, statusText: "Server Error" })));
+  try {
+    await assertRejects(() => generateAnswer("What is GLOP?", ["fact"]));
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("generateAnswer_EmptyFactsList_ReturnsAnswer", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ response: "I don't know." }),
-    });
+Deno.test("generateAnswer_EmptyFactsList_ReturnsAnswer", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(JSON.stringify({ response: "I don't know." }))));
+  try {
     const result = await generateAnswer("What is GLOP?", []);
-    expect(result).toContain("don't know");
-  });
+    assertEquals(result.includes("don't know"), true);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("generateAnswer_WithFacts_SendsPromptContainingFacts", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ response: "Answer" }),
-    });
+Deno.test("generateAnswer_WithFacts_SendsPromptContainingFacts", async () => {
+  let calledBody = "";
+  const fetchStub = stub(globalThis, "fetch", (_input: URL | RequestInfo, init?: RequestInit) => {
+    calledBody = init?.body as string;
+    return Promise.resolve(new Response(JSON.stringify({ response: "Answer" })));
+  });
+  try {
     const facts = ["Fact A.", "Fact B."];
     await generateAnswer("What?", facts);
-    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body as string);
-    expect(callBody.prompt).toContain("Fact A.");
-    expect(callBody.prompt).toContain("Fact B.");
-    expect(callBody.prompt).toContain("What?");
-    expect(callBody.model).toBe("llama3");
-    expect(callBody.stream).toBe(false);
-  });
+    const body = JSON.parse(calledBody);
+    assertEquals(body.prompt.includes("Fact A."), true);
+    assertEquals(body.prompt.includes("Fact B."), true);
+    assertEquals(body.prompt.includes("What?"), true);
+    assertEquals(body.model, "llama3");
+    assertEquals(body.stream, false);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("generateAnswer_SendsCorrectUrl_PostsToGenerateApi", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ response: "Answer" }),
-    });
-    await generateAnswer("Q?", ["F."]);
-    const callUrl = mockFetch.mock.calls[0][0] as string;
-    expect(callUrl).toBe("http://localhost:11434/api/generate");
+Deno.test("generateAnswer_SendsCorrectUrl_PostsToGenerateApi", async () => {
+  let calledUrl = "";
+  const fetchStub = stub(globalThis, "fetch", (_input: URL | RequestInfo, _init?: RequestInit) => {
+    calledUrl = _input as string;
+    return Promise.resolve(new Response(JSON.stringify({ response: "Answer" })));
   });
+  try {
+    await generateAnswer("Q?", ["F."]);
+    assertEquals(calledUrl, "http://localhost:11434/api/generate");
+  } finally {
+    fetchStub.restore();
+  }
 });

@@ -1,4 +1,4 @@
-import { OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL } from "../config.js";
+import { OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL } from "../config.ts";
 
 export async function generateAnswer(
   question: string,

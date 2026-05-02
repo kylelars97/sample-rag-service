@@ -1,7 +1,6 @@
-import { v4 as uuidv4 } from "uuid";
 import type { Root, Content } from "mdast";
-import type { Fact } from "../types.js";
-import { OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL } from "../config.js";
+import type { Fact } from "../types.ts";
+import { OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL } from "../config.ts";
 
 type NodeWithChildren = { readonly children: readonly Content[] };
 
@@ -79,7 +78,7 @@ export function extractFactsFromTree(tree: Root): readonly Fact[] {
 
 function createFact(text: string, sourceSection?: string): Fact {
   return {
-    id: uuidv4(),
+    id: crypto.randomUUID(),
     text,
     ...(sourceSection !== undefined
       ? { sourceSection, tags: [sourceSection.toLowerCase()] }
@@ -138,7 +137,7 @@ function parseLLMResponse(response: string): readonly Fact[] {
   for (const item of parsed) {
     if (!isLLMFact(item)) continue;
     facts.push({
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       text: item.text,
       ...(item.sourceSection !== undefined ? { sourceSection: item.sourceSection } : {}),
       ...(item.tags !== undefined ? { tags: item.tags } : {}),

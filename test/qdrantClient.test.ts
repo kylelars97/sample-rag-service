@@ -1,41 +1,38 @@
-import { describe, it, expect, vi } from "vitest";
-import { getQdrantClient, ensureCollection } from "../src/vector/qdrantClient.js";
+import { assertEquals } from "@std/assert";
+import { ensureCollection, _setQdrantClient } from "../src/vector/qdrantClient.ts";
 
-vi.mock("@qdrant/js-client-rest", () => {
+Deno.test("ensureCollection_CollectionDoesNotExist_CreatesCollection", async () => {
+  let createCalled = false;
   const mockClient = {
-    getCollection: vi.fn().mockRejectedValue(new Error("not found")),
-    createCollection: vi.fn().mockResolvedValue(undefined),
-    getCollections: vi.fn().mockResolvedValue({ collections: [] }),
+    getCollection: () => Promise.reject(new Error("not found")),
+    createCollection: () => {
+      createCalled = true;
+      return Promise.resolve(undefined);
+    },
   };
-  return { QdrantClient: vi.fn().mockImplementation(() => mockClient) };
+  _setQdrantClient(mockClient as never);
+  try {
+    await ensureCollection();
+    assertEquals(createCalled, true);
+  } finally {
+    _setQdrantClient(null);
+  }
 });
 
-describe("getQdrantClient", () => {
-  it("getQdrantClient_ReturnsClientObject_ReturnsClient", () => {
-    const client = getQdrantClient();
-    expect(client).toBeDefined();
-  });
-});
-
-describe("ensureCollection", () => {
-  it("ensureCollection_CollectionDoesNotExist_CreatesCollection", async () => {
-    await expect(ensureCollection()).resolves.not.toThrow();
-  });
-
-  it("ensureCollection_CollectionAlreadyExists_SkipsCreation", async () => {
-    vi.resetModules();
-    const mockGetCollection = vi.fn().mockResolvedValue({});
-    const mockCreateCollection = vi.fn().mockResolvedValue(undefined);
-    vi.doMock("@qdrant/js-client-rest", () => ({
-      QdrantClient: vi.fn().mockImplementation(() => ({
-        getCollection: mockGetCollection,
-        createCollection: mockCreateCollection,
-      })),
-    }));
-    const { ensureCollection: freshEnsure } = await import("../src/vector/qdrantClient.js");
-    await freshEnsure();
-    expect(mockGetCollection).toHaveBeenCalled();
-    expect(mockCreateCollection).not.toHaveBeenCalled();
-    vi.doUnmock("@qdrant/js-client-rest");
-  });
+Deno.test("ensureCollection_CollectionAlreadyExists_SkipsCreation", async () => {
+  let createCalled = false;
+  const mockClient = {
+    getCollection: () => Promise.resolve({}),
+    createCollection: () => {
+      createCalled = true;
+      return Promise.resolve(undefined);
+    },
+  };
+  _setQdrantClient(mockClient as never);
+  try {
+    await ensureCollection();
+    assertEquals(createCalled, false);
+  } finally {
+    _setQdrantClient(null);
+  }
 });

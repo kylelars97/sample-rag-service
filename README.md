@@ -5,8 +5,8 @@ A local Retrieval-Augmented Generation (RAG) service that extracts atomic facts 
 ## Quick Start
 
 ```sh
-# 1. Install dependencies
-npm install
+# 1. Install Deno
+curl -fsSL https://deno.land/install.sh | sh
 
 # 2. Start Qdrant
 docker compose -f docker/docker-compose.yml up -d
@@ -20,10 +20,10 @@ ollama pull nomic-embed-text
 cp .env.example .env
 
 # 5. Ingest seed data
-npm run ingest
+deno task ingest
 
 # 6. Start the server
-npm start
+deno task start
 ```
 
 Query the API:
@@ -49,18 +49,16 @@ curl http://localhost:3000/
 | `OLLAMA_EMBED_MODEL` | `nomic-embed-text`          | No       | Ollama model used for embedding text into vectors                           |
 | `QDRANT_URL`         | `http://localhost:6333`     | No       | URL of the Qdrant vector database instance                                  |
 | `QDRANT_COLLECTION`  | `facts`                     | No       | Name of the Qdrant collection to store and query fact embeddings            |
-| `PORT`               | `3000`                      | No       | Port the Fastify HTTP server listens on                                     |
-| `SEED_DATA_PATH`     | `data/glop.md`             | No       | Path to the Markdown file ingested by `npm run ingest`                     |
+| `PORT`               | `3000`                      | No       | Port the Deno HTTP server listens on                                        |
+| `SEED_DATA_PATH`     | `data/glop.md`             | No       | Path to the Markdown file ingested by `deno task ingest`                   |
 
 All variables have sensible defaults for local development, so copying `.env.example` to `.env` is enough to get started.
 
-## Scripts
+## Tasks
 
-| Script              | Description                     |
+| Task                | Description                     |
 | ------------------- | ------------------------------- |
-| `npm start`         | Start the server                |
-| `npm run dev`       | Start server with watch reload   |
-| `npm run ingest`   | Ingest seed markdown into Qdrant |
-| `npm run build`    | Compile TypeScript               |
-| `npm run test`     | Run tests                        |
-| `npm run typecheck` | Type-check without compiling    |
+| `deno task start`   | Start the server                |
+| `deno task dev`     | Start server with watch reload   |
+| `deno task ingest`  | Ingest seed markdown into Qdrant |
+| `deno task test`    | Run tests                        |

@@ -1,5 +1,5 @@
-import { OLLAMA_BASE_URL, OLLAMA_EMBED_MODEL } from "../config.js";
-import type { Fact, EmbeddedFact } from "../types.js";
+import { OLLAMA_BASE_URL, OLLAMA_EMBED_MODEL } from "../config.ts";
+import type { Fact, EmbeddedFact } from "../types.ts";
 
 export async function embedText(text: string): Promise<readonly number[]> {
   const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {

@@ -1,312 +1,335 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { extractFactsFromTree, extractFactsWithLLM } from "../src/ingest/factExtractor.js";
-import { parseMarkdown } from "../src/ingest/markdownParser.js";
+import { assertEquals, assertRejects } from "@std/assert";
+import { extractFactsFromTree, extractFactsWithLLM } from "../src/ingest/factExtractor.ts";
+import { parseMarkdown } from "../src/ingest/markdownParser.ts";
 import type { Root } from "mdast";
+import { stub } from "@std/testing/mock";
 
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
-
-describe("extractFactsFromTree", () => {
-  it("extractFactsFromTree_SimpleParagraph_ReturnsFact", () => {
-    const md = "GLOP is a unified planetary system.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.length).toBeGreaterThan(0);
-    expect(facts[0].text).toContain("GLOP");
-  });
-
-  it("extractFactsFromTree_HeadingWithBody_ReturnsFactsFromBoth", () => {
-    const md = "# Overview\n\nGLOP is a unified planetary system.\n\n## Governance\n\nGLOP is managed by the Core Consensus Engine.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.length).toBeGreaterThanOrEqual(2);
-  });
-
-  it("extractFactsFromTree_ListItems_ReturnsFactsFromItems", () => {
-    const md = "## Features\n\n- Feature one is great.\n- Feature two is better.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.some((f) => f.text.includes("Feature one"))).toBe(true);
-    expect(facts.some((f) => f.text.includes("Feature two"))).toBe(true);
-  });
-
-  it("extractFactsFromTree_EmptyInput_ReturnsEmptyArray", () => {
-    const md = "";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts).toEqual([]);
-  });
-
-  it("extractFactsFromTree_FactsHaveIds_ReturnsFactsWithValidIds", () => {
-    const md = "Some content here.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    for (const fact of facts) {
-      expect(fact.id).toBeTruthy();
-    }
-  });
-
-  it("extractFactsFromTree_FactsHaveSourceSection_IncludesHeading", () => {
-    const md = "# Title\n\nContent under title.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const withSection = facts.find((f) => f.sourceSection !== undefined);
-    expect(withSection).toBeDefined();
-  });
-
-  it("extractFactsFromTree_HeadingSection_AddsTagFromHeading", () => {
-    const md = "# Overview\n\nGLOP is a unified planetary system.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const withTag = facts.find((f) => f.tags !== undefined && f.tags.length > 0);
-    expect(withTag).toBeDefined();
-    expect(withTag!.tags).toContain("overview");
-  });
-
-  it("extractFactsFromTree_NestedHeading_UseMostRecentHeadingAsTag", () => {
-    const md = "# Top\n\n## Subsection\n\nSome detail here.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const detailFact = facts.find((f) => f.text.includes("detail"));
-    expect(detailFact).toBeDefined();
-    expect(detailFact!.tags).toContain("subsection");
-  });
-
-  it("extractFactsFromTree_NoHeading_TagsAreUndefined", () => {
-    const md = "A fact without any heading.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts[0].tags).toBeUndefined();
-  });
-
-  it("extractFactsFromTree_MultiSentenceParagraph_SplitsIntoSeparateFacts", () => {
-    const md = "First sentence. Second sentence. Third sentence.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.length).toBeGreaterThanOrEqual(3);
-    expect(facts[0].text).toContain("First sentence");
-    expect(facts[1].text).toContain("Second sentence");
-  });
-
-  it("extractFactsFromTree_Blockquote_SkipsBlockquotes", () => {
-    const md = "# Section\n\n> This is a quote.\n\nActual content.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const quoteFact = facts.find((f) => f.text.includes("quote"));
-    const contentFact = facts.find((f) => f.text.includes("Actual content"));
-    expect(contentFact).toBeDefined();
-    expect(quoteFact).toBeUndefined();
-  });
-
-  it("extractFactsFromTree_InlineCode_ExtractsCodeText", () => {
-    const md = "Use the `extractFacts` function to process markdown.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const codeFact = facts.find((f) => f.text.includes("extractFacts"));
-    expect(codeFact).toBeDefined();
-  });
-
-  it("extractFactsFromTree_LinkText_ExtractsLinkLabel", () => {
-    const md = "Read the [documentation](https://example.com) for details.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const linkFact = facts.find((f) => f.text.includes("documentation"));
-    expect(linkFact).toBeDefined();
-  });
-
-  it("extractFactsFromTree_Strikethrough_ExtractsDeletedText", () => {
-    const md = "This is ~~removed text~~ kept text.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const deletedFact = facts.find((f) => f.text.includes("removed text"));
-    expect(deletedFact).toBeDefined();
-  });
-
-  it("extractFactsFromTree_CodeBlock_SkipsCodeBlocks", () => {
-    const md = "# Section\n\n```\nconst x = 1;\n```\n\nActual content.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const codeLineFact = facts.find((f) => f.text.includes("const x"));
-    const contentFact = facts.find((f) => f.text.includes("Actual content"));
-    expect(contentFact).toBeDefined();
-    expect(codeLineFact).toBeUndefined();
-  });
-
-  it("extractFactsFromTree_HorizontalRule_SkipsThematicBreaks", () => {
-    const md = "# Section\n\nFirst fact.\n\n---\n\nSecond fact.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.length).toBeGreaterThanOrEqual(2);
-    expect(facts.every((f) => !f.text.includes("---"))).toBe(true);
-  });
-
-  it("extractFactsFromTree_HeadingWithInlineCode_ExtractsHeadingText", () => {
-    const md = "# The `extractFacts` function\n\nSome content.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const codeSectionFact = facts.find((f) => f.sourceSection === "The extractFacts function");
-    expect(codeSectionFact).toBeDefined();
-  });
-
-  it("extractFactsFromTree_OrderedList_ExtractsListItems", () => {
-    const md = "## Steps\n\n1. First step is important.\n2. Second step follows.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.some((f) => f.text.includes("First step"))).toBe(true);
-    expect(facts.some((f) => f.text.includes("Second step"))).toBe(true);
-  });
-
-  it("extractFactsFromTree_ExclamationSplit_SplitsIntoFacts", () => {
-    const md = "GLOP is amazing! It never sleeps.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.length).toBeGreaterThanOrEqual(2);
-    expect(facts.some((f) => f.text.includes("amazing"))).toBe(true);
-  });
-
-  it("extractFactsFromTree_QuestionSplit_SplitsIntoFacts", () => {
-    const md = "What is GLOP? A unified planetary system.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.length).toBeGreaterThanOrEqual(2);
-    expect(facts.some((f) => f.text.includes("unified"))).toBe(true);
-  });
-
-  it("extractFactsFromTree_BoldInline_ExtractsTextContent", () => {
-    const md = "# Intro\n\nGLOP is **absolutely** unified.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const boldFact = facts.find((f) => f.text.includes("absolutely"));
-    expect(boldFact).toBeDefined();
-  });
-
-  it("extractFactsFromTree_HTMLBlock_SkipsHtmlNodes", () => {
-    const md = "# Section\n\n<div>Some HTML content</div>\n\nVisible content.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const visibleFact = facts.find((f) => f.text.includes("Visible content"));
-    expect(visibleFact).toBeDefined();
-  });
-
-  it("extractFactsFromTree_DeeplyNestedInline_ExtractsAllText", () => {
-    const md = "# Deep\n\nThis is **bold *italic `code`* text** here.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    expect(facts.length).toBeGreaterThan(0);
-    expect(facts[0].text).toContain("code");
-  });
-
-  it("extractFactsFromTree_MultipleHeadings_TracksSectionChanges", () => {
-    const md = "# Alpha\n\nAlpha fact.\n\n## Beta\n\nBeta fact.\n\n# Gamma\n\nGamma fact.";
-    const tree: Root = parseMarkdown(md);
-    const facts = extractFactsFromTree(tree);
-    const alphaFact = facts.find((f) => f.text.includes("Alpha fact"));
-    const betaFact = facts.find((f) => f.text.includes("Beta fact"));
-    const gammaFact = facts.find((f) => f.text.includes("Gamma fact"));
-    expect(alphaFact?.sourceSection).toBe("Alpha");
-    expect(betaFact?.sourceSection).toBe("Beta");
-    expect(gammaFact?.sourceSection).toBe("Gamma");
-  });
+Deno.test("extractFactsFromTree_SimpleParagraph_ReturnsFact", () => {
+  const md = "GLOP is a unified planetary system.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.length > 0, true);
+  assertEquals(facts[0].text.includes("GLOP"), true);
 });
 
-describe("extractFactsWithLLM", () => {
-  beforeEach(() => {
-    mockFetch.mockReset();
-  });
+Deno.test("extractFactsFromTree_HeadingWithBody_ReturnsFactsFromBoth", () => {
+  const md = "# Overview\n\nGLOP is a unified planetary system.\n\n## Governance\n\nGLOP is managed by the Core Consensus Engine.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.length >= 2, true);
+});
 
-  it("extractFactsWithLLM_ValidResponse_ReturnsFacts", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        response: JSON.stringify([
-          { text: "GLOP is a unified planetary system.", sourceSection: "Overview", tags: ["overview"] },
-          { text: "GLOP is managed by the Core Consensus Engine.", sourceSection: "Governance", tags: ["governance"] },
-        ]),
-      }),
-    });
+Deno.test("extractFactsFromTree_ListItems_ReturnsFactsFromItems", () => {
+  const md = "## Features\n\n- Feature one is great.\n- Feature two is better.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.some((f) => f.text.includes("Feature one")), true);
+  assertEquals(facts.some((f) => f.text.includes("Feature two")), true);
+});
+
+Deno.test("extractFactsFromTree_EmptyInput_ReturnsEmptyArray", () => {
+  const md = "";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts, []);
+});
+
+Deno.test("extractFactsFromTree_FactsHaveIds_ReturnsFactsWithValidIds", () => {
+  const md = "Some content here.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  for (const fact of facts) {
+    assertEquals(fact.id.length > 0, true);
+  }
+});
+
+Deno.test("extractFactsFromTree_FactsHaveSourceSection_IncludesHeading", () => {
+  const md = "# Title\n\nContent under title.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const withSection = facts.find((f) => f.sourceSection !== undefined);
+  assertEquals(withSection !== undefined, true);
+});
+
+Deno.test("extractFactsFromTree_HeadingSection_AddsTagFromHeading", () => {
+  const md = "# Overview\n\nGLOP is a unified planetary system.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const withTag = facts.find((f) => f.tags !== undefined && f.tags.length > 0);
+  assertEquals(withTag !== undefined, true);
+  assertEquals(withTag!.tags!.includes("overview"), true);
+});
+
+Deno.test("extractFactsFromTree_NestedHeading_UseMostRecentHeadingAsTag", () => {
+  const md = "# Top\n\n## Subsection\n\nSome detail here.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const detailFact = facts.find((f) => f.text.includes("detail"));
+  assertEquals(detailFact !== undefined, true);
+  assertEquals(detailFact!.tags!.includes("subsection"), true);
+});
+
+Deno.test("extractFactsFromTree_NoHeading_TagsAreUndefined", () => {
+  const md = "A fact without any heading.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts[0].tags, undefined);
+});
+
+Deno.test("extractFactsFromTree_MultiSentenceParagraph_SplitsIntoSeparateFacts", () => {
+  const md = "First sentence. Second sentence. Third sentence.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.length >= 3, true);
+  assertEquals(facts[0].text.includes("First sentence"), true);
+  assertEquals(facts[1].text.includes("Second sentence"), true);
+});
+
+Deno.test("extractFactsFromTree_Blockquote_SkipsBlockquotes", () => {
+  const md = "# Section\n\n> This is a quote.\n\nActual content.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const quoteFact = facts.find((f) => f.text.includes("quote"));
+  const contentFact = facts.find((f) => f.text.includes("Actual content"));
+  assertEquals(contentFact !== undefined, true);
+  assertEquals(quoteFact, undefined);
+});
+
+Deno.test("extractFactsFromTree_InlineCode_ExtractsCodeText", () => {
+  const md = "Use the `extractFacts` function to process markdown.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const codeFact = facts.find((f) => f.text.includes("extractFacts"));
+  assertEquals(codeFact !== undefined, true);
+});
+
+Deno.test("extractFactsFromTree_LinkText_ExtractsLinkLabel", () => {
+  const md = "Read the [documentation](https://example.com) for details.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const linkFact = facts.find((f) => f.text.includes("documentation"));
+  assertEquals(linkFact !== undefined, true);
+});
+
+Deno.test("extractFactsFromTree_Strikethrough_ExtractsDeletedText", () => {
+  const md = "This is ~~removed text~~ kept text.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const deletedFact = facts.find((f) => f.text.includes("removed text"));
+  assertEquals(deletedFact !== undefined, true);
+});
+
+Deno.test("extractFactsFromTree_CodeBlock_SkipsCodeBlocks", () => {
+  const md = "# Section\n\n```\nconst x = 1;\n```\n\nActual content.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const codeLineFact = facts.find((f) => f.text.includes("const x"));
+  const contentFact = facts.find((f) => f.text.includes("Actual content"));
+  assertEquals(contentFact !== undefined, true);
+  assertEquals(codeLineFact, undefined);
+});
+
+Deno.test("extractFactsFromTree_HorizontalRule_SkipsThematicBreaks", () => {
+  const md = "# Section\n\nFirst fact.\n\n---\n\nSecond fact.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.length >= 2, true);
+  assertEquals(facts.every((f) => !f.text.includes("---")), true);
+});
+
+Deno.test("extractFactsFromTree_HeadingWithInlineCode_ExtractsHeadingText", () => {
+  const md = "# The `extractFacts` function\n\nSome content.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const codeSectionFact = facts.find((f) => f.sourceSection === "The extractFacts function");
+  assertEquals(codeSectionFact !== undefined, true);
+});
+
+Deno.test("extractFactsFromTree_OrderedList_ExtractsListItems", () => {
+  const md = "## Steps\n\n1. First step is important.\n2. Second step follows.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.some((f) => f.text.includes("First step")), true);
+  assertEquals(facts.some((f) => f.text.includes("Second step")), true);
+});
+
+Deno.test("extractFactsFromTree_ExclamationSplit_SplitsIntoFacts", () => {
+  const md = "GLOP is amazing! It never sleeps.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.length >= 2, true);
+  assertEquals(facts.some((f) => f.text.includes("amazing")), true);
+});
+
+Deno.test("extractFactsFromTree_QuestionSplit_SplitsIntoFacts", () => {
+  const md = "What is GLOP? A unified planetary system.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.length >= 2, true);
+  assertEquals(facts.some((f) => f.text.includes("unified")), true);
+});
+
+Deno.test("extractFactsFromTree_BoldInline_ExtractsTextContent", () => {
+  const md = "# Intro\n\nGLOP is **absolutely** unified.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const boldFact = facts.find((f) => f.text.includes("absolutely"));
+  assertEquals(boldFact !== undefined, true);
+});
+
+Deno.test("extractFactsFromTree_HTMLBlock_SkipsHtmlNodes", () => {
+  const md = "# Section\n\n<div>Some HTML content</div>\n\nVisible content.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const visibleFact = facts.find((f) => f.text.includes("Visible content"));
+  assertEquals(visibleFact !== undefined, true);
+});
+
+Deno.test("extractFactsFromTree_DeeplyNestedInline_ExtractsAllText", () => {
+  const md = "# Deep\n\nThis is **bold *italic `code`* text** here.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  assertEquals(facts.length > 0, true);
+  assertEquals(facts[0].text.includes("code"), true);
+});
+
+Deno.test("extractFactsFromTree_MultipleHeadings_TracksSectionChanges", () => {
+  const md = "# Alpha\n\nAlpha fact.\n\n## Beta\n\nBeta fact.\n\n# Gamma\n\nGamma fact.";
+  const tree: Root = parseMarkdown(md);
+  const facts = extractFactsFromTree(tree);
+  const alphaFact = facts.find((f) => f.text.includes("Alpha fact"));
+  const betaFact = facts.find((f) => f.text.includes("Beta fact"));
+  const gammaFact = facts.find((f) => f.text.includes("Gamma fact"));
+  assertEquals(alphaFact?.sourceSection, "Alpha");
+  assertEquals(betaFact?.sourceSection, "Beta");
+  assertEquals(gammaFact?.sourceSection, "Gamma");
+});
+
+Deno.test("extractFactsWithLLM_ValidResponse_ReturnsFacts", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          response: JSON.stringify([
+            { text: "GLOP is a unified planetary system.", sourceSection: "Overview", tags: ["overview"] },
+            { text: "GLOP is managed by the Core Consensus Engine.", sourceSection: "Governance", tags: ["governance"] },
+          ]),
+        }),
+      ),
+    ));
+  try {
     const facts = await extractFactsWithLLM("GLOP is a unified planetary system. GLOP is managed by the Core Consensus Engine.");
-    expect(facts.length).toBe(2);
-    expect(facts[0].text).toContain("GLOP");
-    expect(facts[0]).toHaveProperty("id");
-  });
+    assertEquals(facts.length, 2);
+    assertEquals(facts[0].text.includes("GLOP"), true);
+    assertEquals("id" in facts[0], true);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("extractFactsWithLLM_SendsCorrectUrlAndModel_PostsToGenerateApi", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        response: JSON.stringify([{ text: "A fact." }]),
-      }),
-    });
+Deno.test("extractFactsWithLLM_SendsCorrectUrlAndModel_PostsToGenerateApi", async () => {
+  let calledUrl = "";
+  let calledBody = "";
+  const fetchStub = stub(globalThis, "fetch", (_input: URL | RequestInfo, init?: RequestInit) => {
+    const input = _input as string;
+    calledUrl = input;
+    calledBody = init?.body as string;
+    return Promise.resolve(
+      new Response(JSON.stringify({ response: JSON.stringify([{ text: "A fact." }]) })),
+    );
+  });
+  try {
     await extractFactsWithLLM("Some text");
-    const callUrl = mockFetch.mock.calls[0][0] as string;
-    const callOpts = mockFetch.mock.calls[0][1] as RequestInit;
-    expect(callUrl).toBe("http://localhost:11434/api/generate");
-    const body = JSON.parse(callOpts.body as string);
-    expect(body.model).toBe("llama3");
-    expect(body.stream).toBe(false);
-    expect(body.prompt).toContain("Some text");
-  });
+    assertEquals(calledUrl, "http://localhost:11434/api/generate");
+    const body = JSON.parse(calledBody);
+    assertEquals(body.model, "llama3");
+    assertEquals(body.stream, false);
+    assertEquals(body.prompt.includes("Some text"), true);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("extractFactsWithLLM_FailedFetch_ThrowsError", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, statusText: "Service Unavailable" });
-    await expect(extractFactsWithLLM("text")).rejects.toThrow();
-  });
+Deno.test("extractFactsWithLLM_FailedFetch_ThrowsError", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(null, { status: 503, statusText: "Service Unavailable" })));
+  try {
+    await assertRejects(() => extractFactsWithLLM("text"));
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("extractFactsWithLLM_MalformedJsonResponse_ReturnsEmptyArray", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ response: "not valid json [[" }),
-    });
+Deno.test("extractFactsWithLLM_MalformedJsonResponse_ReturnsEmptyArray", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(JSON.stringify({ response: "not valid json [[" }))));
+  try {
     const facts = await extractFactsWithLLM("text");
-    expect(facts).toEqual([]);
-  });
+    assertEquals(facts, []);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("extractFactsWithLLM_ResponseWithMissingFields_UsesDefaults", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        response: JSON.stringify([{ text: "A fact without section." }]),
-      }),
-    });
+Deno.test("extractFactsWithLLM_ResponseWithMissingFields_UsesDefaults", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(
+      new Response(JSON.stringify({ response: JSON.stringify([{ text: "A fact without section." }]) })),
+    ));
+  try {
     const facts = await extractFactsWithLLM("text");
-    expect(facts.length).toBe(1);
-    expect(facts[0].text).toBe("A fact without section.");
-    expect(facts[0].sourceSection).toBeUndefined();
-    expect(facts[0].tags).toBeUndefined();
-  });
+    assertEquals(facts.length, 1);
+    assertEquals(facts[0].text, "A fact without section.");
+    assertEquals(facts[0].sourceSection, undefined);
+    assertEquals(facts[0].tags, undefined);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("extractFactsWithLLM_EmptyArrayResponse_ReturnsEmptyArray", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ response: "[]" }),
-    });
+Deno.test("extractFactsWithLLM_EmptyArrayResponse_ReturnsEmptyArray", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(new Response(JSON.stringify({ response: "[]" }))));
+  try {
     const facts = await extractFactsWithLLM("text");
-    expect(facts).toEqual([]);
-  });
+    assertEquals(facts, []);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("extractFactsWithLLM_NonArrayResponse_ReturnsEmptyArray", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ response: JSON.stringify({ text: "not an array" }) }),
-    });
+Deno.test("extractFactsWithLLM_NonArrayResponse_ReturnsEmptyArray", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(
+      new Response(JSON.stringify({ response: JSON.stringify({ text: "not an array" }) })),
+    ));
+  try {
     const facts = await extractFactsWithLLM("text");
-    expect(facts).toEqual([]);
-  });
+    assertEquals(facts, []);
+  } finally {
+    fetchStub.restore();
+  }
+});
 
-  it("extractFactsWithLLM_ItemsWithInvalidFields_AreSkipped", async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        response: JSON.stringify([
-          { text: "Valid fact." },
-          { text: 123 },
-          { sourceSection: "No text field" },
-          { text: "Has bad tags", tags: ["good", 42] },
-        ]),
-      }),
-    });
+Deno.test("extractFactsWithLLM_ItemsWithInvalidFields_AreSkipped", async () => {
+  const fetchStub = stub(globalThis, "fetch", () =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          response: JSON.stringify([
+            { text: "Valid fact." },
+            { text: 123 },
+            { sourceSection: "No text field" },
+            { text: "Has bad tags", tags: ["good", 42] },
+          ]),
+        }),
+      ),
+    ));
+  try {
     const facts = await extractFactsWithLLM("text");
-    expect(facts.length).toBe(1);
-    expect(facts[0].text).toBe("Valid fact.");
-  });
+    assertEquals(facts.length, 1);
+    assertEquals(facts[0].text, "Valid fact.");
+  } finally {
+    fetchStub.restore();
+  }
 });

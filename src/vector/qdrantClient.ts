@@ -3,7 +3,7 @@ import {
   QDRANT_URL,
   QDRANT_COLLECTION,
   EMBEDDING_DIMENSION,
-} from "../config.js";
+} from "../config.ts";
 
 let clientInstance: QdrantClient | null = null;
 
@@ -12,6 +12,10 @@ export function getQdrantClient(): QdrantClient {
     clientInstance = new QdrantClient({ url: QDRANT_URL });
   }
   return clientInstance;
+}
+
+export function _setQdrantClient(client: QdrantClient | null): void {
+  clientInstance = client;
 }
 
 export async function ensureCollection(): Promise<void> {
