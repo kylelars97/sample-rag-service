@@ -32,6 +32,7 @@ If applicable, use RGR to complete the task.
 2. GREEN: write the implementation to pass that test
 3. REPEAT until done
 4. REFACTOR the code
+5. DOCUMENT any changes to the baseline configuration in the README.md
 
 # FEEDBACK LOOPS
 
