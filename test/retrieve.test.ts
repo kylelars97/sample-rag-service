@@ -1,20 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { searchFacts } from "../src/rag/retrieve.js";
 
-const mockFetch = vi.fn();
-vi.stubGlobal("fetch", mockFetch);
+const mockSearch = vi.fn();
 
 vi.mock("../src/vector/qdrantClient.js", () => ({
-  getQdrantClient: () => ({
-    search: vi.fn().mockResolvedValue([
-      { payload: { text: "GLOP is a planet." }, score: 0.9 },
-    ]),
-  }),
+  getQdrantClient: () => ({ search: mockSearch }),
 }));
 
 describe("searchFacts", () => {
   beforeEach(() => {
-    mockFetch.mockReset();
+    mockSearch.mockReset();
+    mockSearch.mockResolvedValue([
+      { payload: { text: "GLOP is a planet." }, score: 0.9 },
+    ]);
   });
 
   it("searchFacts_QueryEmbedding_ReturnsFactTexts", async () => {
@@ -28,5 +26,32 @@ describe("searchFacts", () => {
     const shortEmbedding: readonly number[] = [0.1, 0.2, 0.3];
     const results = await searchFacts(shortEmbedding);
     expect(Array.isArray(results)).toBe(true);
+  });
+
+  it("searchFacts_EmptyResults_ReturnsEmptyArray", async () => {
+    mockSearch.mockResolvedValue([]);
+    const queryEmbedding: readonly number[] = new Array(768).fill(0.5);
+    const results = await searchFacts(queryEmbedding);
+    expect(results).toEqual([]);
+  });
+
+  it("searchFacts_NullPayload_ReturnsEmptyStringForNullAndTextForValid", async () => {
+    mockSearch.mockResolvedValue([
+      { payload: null, score: 0.5 },
+      { payload: { text: "Valid fact." }, score: 0.8 },
+    ]);
+    const queryEmbedding: readonly number[] = new Array(768).fill(0.5);
+    const results = await searchFacts(queryEmbedding);
+    expect(results[0]).toBe("");
+    expect(results[1]).toBe("Valid fact.");
+  });
+
+  it("searchFacts_PayloadWithMissingTextField_ReturnsEmptyString", async () => {
+    mockSearch.mockResolvedValue([
+      { payload: { otherField: "not text" }, score: 0.5 },
+    ]);
+    const queryEmbedding: readonly number[] = new Array(768).fill(0.5);
+    const results = await searchFacts(queryEmbedding);
+    expect(results[0]).toBe("");
   });
 });
