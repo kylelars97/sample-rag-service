@@ -6,5 +6,167 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  rhesis-postgres:
+    image: mirror.gcr.io/pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: rhesis-db
+      POSTGRES_USER: rhesis-user
+      POSTGRES_PASSWORD: rhesis-password
+    volumes:
+      - rhesis_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rhesis-user -d rhesis-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rhesis-network
+
+  rhesis-redis:
+    image: mirror.gcr.io/redis:7-alpine
+    command: redis-server --requirepass rhesis-redis-pass
+    ports:
+      - "6379:6379"
+    volumes:
+      - rhesis_redis_data:/data
+    environment:
+      REDIS_PASSWORD: rhesis-redis-pass
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "rhesis-redis-pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rhesis-network
+
+  rhesis-backend:
+    build:
+      context: https://github.com/rhesis-ai/rhesis.git
+      dockerfile: apps/backend/Dockerfile
+      target: backend
+    environment:
+      SQLALCHEMY_DATABASE_URL: postgresql://rhesis-user:rhesis-password@rhesis-postgres:5432/rhesis-db
+      SQLALCHEMY_DB_DRIVER: postgresql
+      SQLALCHEMY_DB_PORT: "5432"
+      SQLALCHEMY_DB_USER: rhesis-user
+      SQLALCHEMY_DB_PASS: rhesis-password
+      SQLALCHEMY_DB_HOST: rhesis-postgres
+      SQLALCHEMY_DB_NAME: rhesis-db
+      DB_ENCRYPTION_KEY: ""
+      REDIS_URL: redis://:rhesis-redis-pass@rhesis-redis:6379/0
+      BROKER_URL: redis://:rhesis-redis-pass@rhesis-redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:rhesis-redis-pass@rhesis-redis:6379/1
+      ENVIRONMENT: local
+      BACKEND_ENV: local
+      LOG_LEVEL: DEBUG
+      QUICK_START: "true"
+      RHESIS_BASE_URL: https://api.rhesis.ai
+      RHESIS_API_KEY: ""
+      RHESIS_CONNECTOR_DISABLED: "true"
+      FRONTEND_URL: http://localhost:3001
+      BACKEND_URL: http://rhesis-backend:8080
+      DEFAULT_GENERATION_MODEL: "ollama/llama3"
+      DEFAULT_EVALUATION_MODEL: "ollama/llama3"
+      DEFAULT_EMBEDDING_MODEL: "ollama/nomic-embed-text"
+      JWT_SECRET_KEY: local-dev-jwt-secret
+      SESSION_SECRET_KEY: local-dev-session-secret
+    ports:
+      - "8080:8080"
+    depends_on:
+      rhesis-postgres:
+        condition: service_healthy
+      rhesis-redis:
+        condition: service_healthy
+    networks:
+      - rhesis-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  rhesis-worker:
+    build:
+      context: https://github.com/rhesis-ai/rhesis.git
+      dockerfile: apps/backend/Dockerfile
+      target: worker
+    environment:
+      SQLALCHEMY_DATABASE_URL: postgresql://rhesis-user:rhesis-password@rhesis-postgres:5432/rhesis-db
+      SQLALCHEMY_DB_DRIVER: postgresql
+      SQLALCHEMY_DB_PORT: "5432"
+      SQLALCHEMY_DB_USER: rhesis-user
+      SQLALCHEMY_DB_PASS: rhesis-password
+      SQLALCHEMY_DB_HOST: rhesis-postgres
+      SQLALCHEMY_DB_NAME: rhesis-db
+      DB_ENCRYPTION_KEY: ""
+      REDIS_URL: redis://:rhesis-redis-pass@rhesis-redis:6379/0
+      BROKER_URL: redis://:rhesis-redis-pass@rhesis-redis:6379/0
+      CELERY_RESULT_BACKEND: redis://:rhesis-redis-pass@rhesis-redis:6379/1
+      ENVIRONMENT: local
+      WORKER_ENV: local
+      LOG_LEVEL: INFO
+      RHESIS_BASE_URL: https://api.rhesis.ai
+      RHESIS_API_KEY: ""
+      RHESIS_CONNECTOR_DISABLED: "true"
+      BACKEND_URL: http://rhesis-backend:8080
+      DEFAULT_GENERATION_MODEL: "ollama/llama3"
+      DEFAULT_EVALUATION_MODEL: "ollama/llama3"
+      DEFAULT_EMBEDDING_MODEL: "ollama/nomic-embed-text"
+    ports:
+      - "8081:8081"
+    depends_on:
+      rhesis-postgres:
+        condition: service_healthy
+      rhesis-redis:
+        condition: service_healthy
+    networks:
+      - rhesis-network
+    restart: unless-stopped
+
+  rhesis-frontend:
+    build:
+      context: https://github.com/rhesis-ai/rhesis.git
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+        NEXT_PUBLIC_QUICK_START: "true"
+    environment:
+      ENVIRONMENT: local
+      FRONTEND_ENV: local
+      RHESIS_BASE_URL: https://api.rhesis.ai
+      RHESIS_API_KEY: ""
+      NEXTAUTH_SECRET: local-dev-nextauth-secret
+      NEXTAUTH_URL: http://localhost:3001
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+      NEXT_PUBLIC_QUICK_START: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+    depends_on:
+      rhesis-backend:
+        condition: service_healthy
+    networks:
+      - rhesis-network
+    restart: unless-stopped
+
 volumes:
   qdrant_data:
+  ollama_data:
+  rhesis_postgres_data:
+  rhesis_redis_data:
+
+networks:
+  rhesis-network:
+    driver: bridge

@@ -29,3 +29,5 @@ Thumbs.db
 
 # Testing
 test-results/
+acceptance/__pycache__/
+node_modules

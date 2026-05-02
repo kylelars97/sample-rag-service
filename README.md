@@ -73,15 +73,69 @@ curl http://localhost:3000/
 | `QDRANT_COLLECTION`  | `facts`                     | No       | Name of the Qdrant collection to store and query fact embeddings            |
 | `PORT`               | `3000`                      | No       | Port the Deno HTTP server listens on                                        |
 | `SEED_DATA_PATH`     | `data/glop.md`             | No       | Path to the Markdown file ingested by `deno task ingest`                   |
+| `RAG_SERVICE_URL`   | `http://localhost:3000`     | No       | URL of the RAG service for acceptance tests                                |
 
 All variables have sensible defaults for local development, so copying `.env.example` to `.env` is enough to get started.
 
 ## Tasks
 
-| Task                  | Description                       |
-| --------------------- | --------------------------------- |
-| `deno task start`     | Start the server                  |
-| `deno task dev`       | Start server with watch reload    |
-| `deno task ingest`    | Ingest seed markdown into Qdrant  |
-| `deno task test`      | Run Deno tests                    |
-| `deno task test:shell` | Run shell script tests            |
+| Task                      | Description                                    |
+| ------------------------- | ---------------------------------------------- |
+| `deno task start`         | Start the server                               |
+| `deno task dev`           | Start server with watch reload                 |
+| `deno task ingest`        | Ingest seed markdown into Qdrant               |
+| `deno task test`          | Run unit tests                                 |
+| `deno task test:shell`    | Run shell script tests                         |
+| `deno task test:acceptance`| Run acceptance tests against live RAG service  |
+
+## Acceptance Testing
+
+Acceptance tests validate the RAG service end-to-end using the prompts defined in `test/prompts.json`. Each prompt has an expected response, and the tests verify that the service returns answers containing the key information.
+
+### Prerequisites
+
+1. Start infrastructure services:
+
+   ```sh
+   docker compose -f docker/docker-compose.yml up -d qdrant ollama
+   ```
+
+2. Pull the Ollama chat model (if not already pulled):
+
+   ```sh
+   ollama pull llama3
+   ```
+
+3. Ingest seed data and start the server:
+
+   ```sh
+   deno task ingest
+   deno task start
+   ```
+
+### Run Acceptance Tests
+
+```sh
+deno task test:acceptance
+```
+
+This sends each prompt from `test/prompts.json` to the running RAG service and checks that the answers contain relevant terms from the expected responses. A 60% pass rate threshold is applied to account for LLM output variability.
+
+### Rhesis Integration (Advanced)
+
+For LLM-as-judge evaluation using Rhesis, start the full Rhesis stack:
+
+```sh
+docker compose -f docker/docker-compose.yml up -d
+```
+
+This starts Rhesis (backend, worker, frontend, PostgreSQL, Redis) alongside Qdrant and Ollama. The Rhesis frontend is available at `http://localhost:3001`.
+
+Then run the Python acceptance script:
+
+```sh
+pip install rhesis-sdk
+python acceptance/run_acceptance.py
+```
+
+This uses the Rhesis SDK with Ollama (`llama3`) as the observe LLM to judge whether each answer contains the expected information.
