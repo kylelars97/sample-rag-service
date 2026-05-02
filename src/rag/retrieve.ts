@@ -1,6 +1,13 @@
 import { QDRANT_COLLECTION } from "../config.js";
 import { getQdrantClient } from "../vector/qdrantClient.js";
 
+function extractFactText(payload: Record<string, unknown> | null | undefined): string {
+  if (payload != null && typeof payload.text === "string") {
+    return payload.text;
+  }
+  return "";
+}
+
 export async function searchFacts(
   queryEmbedding: readonly number[]
 ): Promise<readonly string[]> {
@@ -9,8 +16,5 @@ export async function searchFacts(
     vector: [...queryEmbedding],
     limit: 5,
   });
-  return results.map((r) => {
-    const payload = r.payload as Record<string, unknown> | null | undefined;
-    return (payload?.text as string) ?? "";
-  });
+  return results.map((r) => extractFactText(r.payload as Record<string, unknown> | null | undefined));
 }

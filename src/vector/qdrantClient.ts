@@ -15,7 +15,7 @@ export function getQdrantClient(): QdrantClient {
 }
 
 export async function ensureCollection(): Promise<void> {
-  const client: QdrantClient = getQdrantClient();
+  const client = getQdrantClient();
   try {
     await client.getCollection(QDRANT_COLLECTION);
   } catch {

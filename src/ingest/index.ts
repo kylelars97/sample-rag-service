@@ -6,7 +6,7 @@ import { indexFacts } from "./indexFacts.js";
 import { SEED_DATA_PATH } from "../config.js";
 
 export async function runIngest(filePath: string = SEED_DATA_PATH): Promise<void> {
-  const md: string = await loadMarkdown(filePath);
+  const md = await loadMarkdown(filePath);
   const tree = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const embeddedFacts = await embedFacts(facts);

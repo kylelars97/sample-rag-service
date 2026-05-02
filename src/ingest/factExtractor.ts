@@ -2,6 +2,22 @@ import { v4 as uuidv4 } from "uuid";
 import type { Root, Content } from "mdast";
 import type { Fact } from "../types.js";
 
+type NodeWithChildren = { readonly children: readonly Content[] };
+
+function hasChildren(node: Content): node is Content & NodeWithChildren {
+  return "children" in node;
+}
+
+function collectTextChildren(children: readonly Content[]): string[] {
+  const parts: string[] = [];
+  for (const child of children) {
+    if (child.type === "text") {
+      parts.push(child.value);
+    }
+  }
+  return parts;
+}
+
 export function extractFactsFromTree(tree: Root): readonly Fact[] {
   const facts: Fact[] = [];
   let currentSection: string | undefined;
@@ -38,8 +54,8 @@ export function extractFactsFromTree(tree: Root): readonly Fact[] {
       return;
     }
 
-    if ("children" in node) {
-      for (const child of (node as { readonly children: readonly Content[] }).children) {
+    if (hasChildren(node)) {
+      for (const child of node.children) {
         processNode(child);
       }
     }
@@ -68,12 +84,8 @@ function extractHeadingText(node: Content): string {
   for (const child of node.children) {
     if (child.type === "text") {
       parts.push(child.value);
-    } else if ("children" in child) {
-      for (const sub of (child as { readonly children: readonly Content[] }).children) {
-        if (sub.type === "text") {
-          parts.push(sub.value);
-        }
-      }
+    } else if (hasChildren(child)) {
+      parts.push(...collectTextChildren(child.children));
     }
   }
   return parts.join("");
@@ -86,11 +98,7 @@ function extractParagraphText(node: Content): string {
     if (child.type === "text") {
       parts.push(child.value);
     } else if (child.type === "strong" || child.type === "emphasis") {
-      for (const sub of child.children) {
-        if (sub.type === "text") {
-          parts.push(sub.value);
-        }
-      }
+      parts.push(...collectTextChildren(child.children));
     }
   }
   return parts.join("");

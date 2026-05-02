@@ -2,7 +2,7 @@ import { OLLAMA_BASE_URL, OLLAMA_EMBED_MODEL } from "../config.js";
 import type { Fact, EmbeddedFact } from "../types.js";
 
 export async function embedText(text: string): Promise<readonly number[]> {
-  const res: Response = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
+  const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ model: OLLAMA_EMBED_MODEL, prompt: text }),
@@ -19,7 +19,7 @@ export async function embedFacts(
 ): Promise<readonly EmbeddedFact[]> {
   const embedded: EmbeddedFact[] = [];
   for (const fact of facts) {
-    const embedding: readonly number[] = await embedText(fact.text);
+    const embedding = await embedText(fact.text);
     embedded.push({ ...fact, embedding });
   }
   return embedded;
