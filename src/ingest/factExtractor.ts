@@ -4,6 +4,8 @@ import type { Fact } from "../types.js";
 
 type NodeWithChildren = { readonly children: readonly Content[] };
 
+const SKIP_TYPES: ReadonlySet<string> = new Set(["blockquote", "thematicBreak", "code", "html"]);
+
 function hasChildren(node: Content): node is Content & NodeWithChildren {
   return "children" in node;
 }
@@ -58,19 +60,7 @@ export function extractFactsFromTree(tree: Root): readonly Fact[] {
       return;
     }
 
-    if (node.type === "blockquote") {
-      return;
-    }
-
-    if (node.type === "thematicBreak") {
-      return;
-    }
-
-    if (node.type === "code") {
-      return;
-    }
-
-    if (node.type === "html") {
+    if (SKIP_TYPES.has(node.type)) {
       return;
     }
 
@@ -100,36 +90,12 @@ function createFact(text: string, sourceSection?: string): Fact {
 
 function extractHeadingText(node: Content): string {
   if (node.type !== "heading") return "";
-  const parts: string[] = [];
-  for (const child of node.children) {
-    if (child.type === "text") {
-      parts.push(child.value);
-    } else if (child.type === "inlineCode") {
-      parts.push(child.value);
-    } else if (hasChildren(child)) {
-      parts.push(...collectTextChildren(child.children));
-    }
-  }
-  return parts.join("");
+  return collectTextChildren(node.children).join("");
 }
 
 function extractParagraphText(node: Content): string {
   if (node.type !== "paragraph") return "";
-  const parts: string[] = [];
-  for (const child of node.children) {
-    if (child.type === "text") {
-      parts.push(child.value);
-    } else if (child.type === "inlineCode") {
-      parts.push(child.value);
-    } else if (child.type === "delete") {
-      parts.push(...collectTextChildren(child.children));
-    } else if (child.type === "strong" || child.type === "emphasis") {
-      parts.push(...collectTextChildren(child.children));
-    } else if (child.type === "link") {
-      parts.push(...collectTextChildren(child.children));
-    }
-  }
-  return parts.join("");
+  return collectTextChildren(node.children).join("");
 }
 
 function splitSentences(text: string): readonly string[] {
