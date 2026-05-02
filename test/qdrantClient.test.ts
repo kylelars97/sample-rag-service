@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assert } from "@std/assert";
 import { ensureCollection, _setQdrantClient } from "../src/vector/qdrantClient.ts";
 
 Deno.test("ensureCollection_CollectionDoesNotExist_CreatesCollection", async () => {
@@ -13,7 +13,7 @@ Deno.test("ensureCollection_CollectionDoesNotExist_CreatesCollection", async () 
   _setQdrantClient(mockClient as never);
   try {
     await ensureCollection();
-    assertEquals(createCalled, true);
+    assert(createCalled);
   } finally {
     _setQdrantClient(null);
   }
@@ -31,7 +31,7 @@ Deno.test("ensureCollection_CollectionAlreadyExists_SkipsCreation", async () => 
   _setQdrantClient(mockClient as never);
   try {
     await ensureCollection();
-    assertEquals(createCalled, false);
+    assert(!createCalled);
   } finally {
     _setQdrantClient(null);
   }

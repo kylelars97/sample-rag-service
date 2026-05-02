@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assert } from "@std/assert";
 import { createRouter } from "../src/api/server.ts";
 import { _setQdrantClient } from "../src/vector/qdrantClient.ts";
 import { stub } from "@std/testing/mock";
@@ -6,14 +6,14 @@ import type { QueryResult } from "../src/types.ts";
 
 Deno.test("createRouter_CreatesRouter_ReturnsRouterMap", () => {
   const router = createRouter();
-  assertEquals(router !== undefined, true);
-  assertEquals(router.size > 0, true);
+  assert(router !== undefined);
+  assert(router.size > 0);
 });
 
 Deno.test("GET_Root_HealthCheck_ReturnsStatusOk", async () => {
   const router = createRouter();
   const handler = router.get("GET /");
-  assertEquals(handler !== undefined, true);
+  assert(handler !== undefined);
   const response = await handler!(new Request("http://localhost:3000/"));
   assertEquals(response.status, 200);
   const body = await response.json() as { status: string };
@@ -45,8 +45,8 @@ Deno.test("POST_Query_ValidPrompt_ReturnsAnswerAndFacts", async () => {
     const response = await handler!(req);
     assertEquals(response.status, 200);
     const body = await response.json() as QueryResult;
-    assertEquals(body.answer.includes("GLOP"), true);
-    assertEquals(body.facts.length > 0, true);
+    assert(body.answer.includes("GLOP"));
+    assert(body.facts.length > 0);
   } finally {
     fetchStub.restore();
     _setQdrantClient(null);

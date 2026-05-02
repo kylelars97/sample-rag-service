@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "@std/assert";
+import { assertEquals, assertRejects, assert } from "@std/assert";
 import { stub } from "@std/testing/mock";
 import { generateAnswer } from "../src/rag/generate.ts";
 
@@ -8,7 +8,7 @@ Deno.test("generateAnswer_WithFacts_ReturnsAnswer", async () => {
   try {
     const facts = ["GLOP is a unified planetary system."];
     const result = await generateAnswer("What is GLOP?", facts);
-    assertEquals(result.includes("GLOP"), true);
+    assert(result.includes("GLOP"));
   } finally {
     fetchStub.restore();
   }
@@ -29,7 +29,7 @@ Deno.test("generateAnswer_EmptyFactsList_ReturnsAnswer", async () => {
     Promise.resolve(new Response(JSON.stringify({ response: "I don't know." }))));
   try {
     const result = await generateAnswer("What is GLOP?", []);
-    assertEquals(result.includes("don't know"), true);
+    assert(result.includes("don't know"));
   } finally {
     fetchStub.restore();
   }
@@ -45,9 +45,9 @@ Deno.test("generateAnswer_WithFacts_SendsPromptContainingFacts", async () => {
     const facts = ["Fact A.", "Fact B."];
     await generateAnswer("What?", facts);
     const body = JSON.parse(calledBody);
-    assertEquals(body.prompt.includes("Fact A."), true);
-    assertEquals(body.prompt.includes("Fact B."), true);
-    assertEquals(body.prompt.includes("What?"), true);
+    assert(body.prompt.includes("Fact A."));
+    assert(body.prompt.includes("Fact B."));
+    assert(body.prompt.includes("What?"));
     assertEquals(body.model, "llama3");
     assertEquals(body.stream, false);
   } finally {
@@ -57,8 +57,8 @@ Deno.test("generateAnswer_WithFacts_SendsPromptContainingFacts", async () => {
 
 Deno.test("generateAnswer_SendsCorrectUrl_PostsToGenerateApi", async () => {
   let calledUrl = "";
-  const fetchStub = stub(globalThis, "fetch", (_input: URL | RequestInfo, _init?: RequestInit) => {
-    calledUrl = _input as string;
+  const fetchStub = stub(globalThis, "fetch", (input: URL | RequestInfo, _init?: RequestInit) => {
+    calledUrl = input as string;
     return Promise.resolve(new Response(JSON.stringify({ response: "Answer" })));
   });
   try {

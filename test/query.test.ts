@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "@std/assert";
+import { assertEquals, assertRejects, assert } from "@std/assert";
 import { stub } from "@std/testing/mock";
 import { runRagQuery } from "../src/rag/query.ts";
 import { _setQdrantClient } from "../src/vector/qdrantClient.ts";
@@ -19,7 +19,7 @@ Deno.test("runRagQuery_FullPipeline_ReturnsAnswerAndFacts", async () => {
   });
   try {
     const result = await runRagQuery("What is GLOP?");
-    assertEquals(result.facts.length > 0, true);
+    assert(result.facts.length > 0);
   } finally {
     fetchStub.restore();
     _setQdrantClient(null);
@@ -76,10 +76,10 @@ Deno.test("runRagQuery_ReturnsResultWithCorrectShape", async () => {
   });
   try {
     const result = await runRagQuery("What is GLOP?");
-    assertEquals("answer" in result, true);
-    assertEquals("facts" in result, true);
+    assert("answer" in result);
+    assert("facts" in result);
     assertEquals(typeof result.answer, "string");
-    assertEquals(Array.isArray(result.facts), true);
+    assert(Array.isArray(result.facts));
   } finally {
     fetchStub.restore();
     _setQdrantClient(null);

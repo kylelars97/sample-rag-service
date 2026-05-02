@@ -10,6 +10,6 @@ export const QDRANT_COLLECTION = Deno.env.get("QDRANT_COLLECTION") ?? "facts";
 
 export const EMBEDDING_DIMENSION = 768;
 
-export const PORT = parseInt(Deno.env.get("PORT") ?? "3000", 10);
+export const PORT: number = Number(Deno.env.get("PORT")) || 3000;
 
 export const SEED_DATA_PATH = Deno.env.get("SEED_DATA_PATH") ?? "data/glop.md";

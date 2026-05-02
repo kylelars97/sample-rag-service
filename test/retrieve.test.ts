@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assert } from "@std/assert";
 import { _setQdrantClient } from "../src/vector/qdrantClient.ts";
 import { searchFacts } from "../src/rag/retrieve.ts";
 
@@ -12,8 +12,8 @@ Deno.test("searchFacts_QueryEmbedding_ReturnsFactTexts", async () => {
   _setQdrantClient(mockClient as never);
   try {
     const results = await searchFacts(defaultEmbedding);
-    assertEquals(results.length > 0, true);
-    assertEquals(results[0].includes("GLOP"), true);
+    assert(results.length > 0);
+    assert(results[0].includes("GLOP"));
   } finally {
     _setQdrantClient(null);
   }
@@ -28,7 +28,7 @@ Deno.test("searchFacts_EmbeddingLength_AcceptsVectors", async () => {
   _setQdrantClient(mockClient as never);
   try {
     const results = await searchFacts(shortEmbedding);
-    assertEquals(Array.isArray(results), true);
+    assert(Array.isArray(results));
   } finally {
     _setQdrantClient(null);
   }
