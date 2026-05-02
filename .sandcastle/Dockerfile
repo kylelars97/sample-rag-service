@@ -20,7 +20,12 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 # --user 1000:1000 (Docker) map to the correct home directory owner.
 RUN usermod -d /home/agent -m -l agent node \
     && groupmod -n agent node \
-    && chown -R agent:agent /home/agent
+    && chown -R agent:agent /home/agent \
+    && mkdir -p /home/agent \
+    && touch /home/agent/.gitconfig \
+    && chown agent:agent /home/agent/.gitconfig
+
+RUN git config --system --add safe.directory "/home/agent/workspace"
 
 # Install OpenCode CLI (run as root before USER agent)
 RUN npm install -g opencode-ai@latest
