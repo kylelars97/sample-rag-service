@@ -68,6 +68,26 @@ const hooks = {
 
 const copyToWorktree = ["node_modules"];
 
+function extractTextFromJsonLines(stdout: string): string {
+  let text = "";
+  for (const line of stdout.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("{")) continue;
+    try {
+      const obj = JSON.parse(trimmed);
+      if (
+        obj.type === "text" &&
+        typeof obj.part?.text === "string"
+      ) {
+        text += obj.part.text;
+      }
+    } catch {
+      // skip non-JSON lines
+    }
+  }
+  return text;
+}
+
 (async () => {
   for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
     console.log(`\n=== Iteration ${iteration}/${MAX_ITERATIONS} ===\n`);
@@ -81,7 +101,8 @@ const copyToWorktree = ["node_modules"];
       promptFile: "./.sandcastle/plan-prompt.md",
     });
 
-    const planMatch = plan.stdout.match(/<plan>([\s\S]*?)<\/plan>/);
+    const planText = extractTextFromJsonLines(plan.stdout);
+    const planMatch = planText.match(/<plan>([\s\S]*?)<\/plan>/);
     if (!planMatch) {
       throw new Error(
         "Planning agent did not produce a <plan> tag.\n\n" + plan.stdout,
