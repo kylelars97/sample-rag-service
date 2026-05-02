@@ -9,16 +9,13 @@ export function createRouter(): Map<string, (req: Request) => Promise<Response>>
 
 export function startServer(port: number = PORT): void {
   const router = createRouter();
-  Deno.serve({ port }, async (req: Request): Promise<Response> => {
+  Deno.serve({ port }, (req: Request): Promise<Response> => {
     const url = new URL(req.url);
     const handler = router.get(`${req.method} ${url.pathname}`);
     if (handler) {
       return handler(req);
     }
-    if (url.pathname === "/" && req.method === "GET") {
-      return Response.json({ status: "ok" });
-    }
-    return new Response("Not Found", { status: 404 });
+    return Promise.resolve(new Response("Not Found", { status: 404 }));
   });
 }
 

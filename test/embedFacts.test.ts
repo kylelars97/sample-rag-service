@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "@std/assert";
+import { assertEquals, assertRejects, assert } from "@std/assert";
 import { stub } from "@std/testing/mock";
 import { embedText, embedFacts } from "../src/ingest/embedFacts.ts";
 import type { Fact, EmbeddedFact } from "../src/types.ts";
@@ -19,8 +19,8 @@ Deno.test("embedText_SendsCorrectUrlAndModel_PostsToApi", async () => {
   const fakeEmbedding = new Array(768).fill(0.1);
   let calledUrl = "";
   let calledBody = "";
-  const fetchStub = stub(globalThis, "fetch", (_input: URL | RequestInfo, init?: RequestInit) => {
-    calledUrl = _input as string;
+  const fetchStub = stub(globalThis, "fetch", (input: URL | RequestInfo, init?: RequestInit) => {
+    calledUrl = input as string;
     calledBody = init?.body as string;
     return Promise.resolve(new Response(JSON.stringify({ embedding: fakeEmbedding })));
   });

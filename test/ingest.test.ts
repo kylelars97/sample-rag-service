@@ -1,4 +1,4 @@
-import { assertEquals } from "@std/assert";
+import { assertEquals, assert } from "@std/assert";
 import { stub } from "@std/testing/mock";
 import { loadMarkdown } from "../src/ingest/markdownLoader.ts";
 import { parseMarkdown } from "../src/ingest/markdownParser.ts";
@@ -19,7 +19,7 @@ Deno.test("runIngest_DefaultPath_ProcessesPipeline", async () => {
   );
   try {
     const content = await loadMarkdown("data/glop.md");
-    assertEquals(content.length > 0, true);
+    assert(content.length > 0);
   } finally {
     fetchStub.restore();
     _setQdrantClient(null);
@@ -30,7 +30,7 @@ Deno.test("runIngest_PipelineStages_WorkTogether", () => {
   const md = "# Test\n\nA test fact.";
   const tree = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.length > 0, true);
+  assert(facts.length > 0);
 });
 
 Deno.test("runIngest_EmbedsFacts_WhenFetchAvailable", async () => {

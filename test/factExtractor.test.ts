@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "@std/assert";
+import { assertEquals, assertRejects, assert } from "@std/assert";
 import { extractFactsFromTree, extractFactsWithLLM } from "../src/ingest/factExtractor.ts";
 import { parseMarkdown } from "../src/ingest/markdownParser.ts";
 import type { Root } from "mdast";
@@ -8,23 +8,23 @@ Deno.test("extractFactsFromTree_SimpleParagraph_ReturnsFact", () => {
   const md = "GLOP is a unified planetary system.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.length > 0, true);
-  assertEquals(facts[0].text.includes("GLOP"), true);
+  assert(facts.length > 0);
+  assert(facts[0].text.includes("GLOP"));
 });
 
 Deno.test("extractFactsFromTree_HeadingWithBody_ReturnsFactsFromBoth", () => {
   const md = "# Overview\n\nGLOP is a unified planetary system.\n\n## Governance\n\nGLOP is managed by the Core Consensus Engine.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.length >= 2, true);
+  assert(facts.length >= 2);
 });
 
 Deno.test("extractFactsFromTree_ListItems_ReturnsFactsFromItems", () => {
   const md = "## Features\n\n- Feature one is great.\n- Feature two is better.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.some((f) => f.text.includes("Feature one")), true);
-  assertEquals(facts.some((f) => f.text.includes("Feature two")), true);
+  assert(facts.some((f) => f.text.includes("Feature one")));
+  assert(facts.some((f) => f.text.includes("Feature two")));
 });
 
 Deno.test("extractFactsFromTree_EmptyInput_ReturnsEmptyArray", () => {
@@ -39,7 +39,7 @@ Deno.test("extractFactsFromTree_FactsHaveIds_ReturnsFactsWithValidIds", () => {
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   for (const fact of facts) {
-    assertEquals(fact.id.length > 0, true);
+    assert(fact.id.length > 0);
   }
 });
 
@@ -48,7 +48,7 @@ Deno.test("extractFactsFromTree_FactsHaveSourceSection_IncludesHeading", () => {
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const withSection = facts.find((f) => f.sourceSection !== undefined);
-  assertEquals(withSection !== undefined, true);
+  assert(withSection !== undefined);
 });
 
 Deno.test("extractFactsFromTree_HeadingSection_AddsTagFromHeading", () => {
@@ -56,8 +56,8 @@ Deno.test("extractFactsFromTree_HeadingSection_AddsTagFromHeading", () => {
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const withTag = facts.find((f) => f.tags !== undefined && f.tags.length > 0);
-  assertEquals(withTag !== undefined, true);
-  assertEquals(withTag!.tags!.includes("overview"), true);
+  assert(withTag !== undefined);
+  assert(withTag!.tags!.includes("overview"));
 });
 
 Deno.test("extractFactsFromTree_NestedHeading_UseMostRecentHeadingAsTag", () => {
@@ -65,8 +65,8 @@ Deno.test("extractFactsFromTree_NestedHeading_UseMostRecentHeadingAsTag", () => 
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const detailFact = facts.find((f) => f.text.includes("detail"));
-  assertEquals(detailFact !== undefined, true);
-  assertEquals(detailFact!.tags!.includes("subsection"), true);
+  assert(detailFact !== undefined);
+  assert(detailFact!.tags!.includes("subsection"));
 });
 
 Deno.test("extractFactsFromTree_NoHeading_TagsAreUndefined", () => {
@@ -80,9 +80,9 @@ Deno.test("extractFactsFromTree_MultiSentenceParagraph_SplitsIntoSeparateFacts",
   const md = "First sentence. Second sentence. Third sentence.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.length >= 3, true);
-  assertEquals(facts[0].text.includes("First sentence"), true);
-  assertEquals(facts[1].text.includes("Second sentence"), true);
+  assert(facts.length >= 3);
+  assert(facts[0].text.includes("First sentence"));
+  assert(facts[1].text.includes("Second sentence"));
 });
 
 Deno.test("extractFactsFromTree_Blockquote_SkipsBlockquotes", () => {
@@ -91,7 +91,7 @@ Deno.test("extractFactsFromTree_Blockquote_SkipsBlockquotes", () => {
   const facts = extractFactsFromTree(tree);
   const quoteFact = facts.find((f) => f.text.includes("quote"));
   const contentFact = facts.find((f) => f.text.includes("Actual content"));
-  assertEquals(contentFact !== undefined, true);
+  assert(contentFact !== undefined);
   assertEquals(quoteFact, undefined);
 });
 
@@ -100,7 +100,7 @@ Deno.test("extractFactsFromTree_InlineCode_ExtractsCodeText", () => {
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const codeFact = facts.find((f) => f.text.includes("extractFacts"));
-  assertEquals(codeFact !== undefined, true);
+  assert(codeFact !== undefined);
 });
 
 Deno.test("extractFactsFromTree_LinkText_ExtractsLinkLabel", () => {
@@ -108,7 +108,7 @@ Deno.test("extractFactsFromTree_LinkText_ExtractsLinkLabel", () => {
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const linkFact = facts.find((f) => f.text.includes("documentation"));
-  assertEquals(linkFact !== undefined, true);
+  assert(linkFact !== undefined);
 });
 
 Deno.test("extractFactsFromTree_Strikethrough_ExtractsDeletedText", () => {
@@ -116,7 +116,7 @@ Deno.test("extractFactsFromTree_Strikethrough_ExtractsDeletedText", () => {
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const deletedFact = facts.find((f) => f.text.includes("removed text"));
-  assertEquals(deletedFact !== undefined, true);
+  assert(deletedFact !== undefined);
 });
 
 Deno.test("extractFactsFromTree_CodeBlock_SkipsCodeBlocks", () => {
@@ -125,7 +125,7 @@ Deno.test("extractFactsFromTree_CodeBlock_SkipsCodeBlocks", () => {
   const facts = extractFactsFromTree(tree);
   const codeLineFact = facts.find((f) => f.text.includes("const x"));
   const contentFact = facts.find((f) => f.text.includes("Actual content"));
-  assertEquals(contentFact !== undefined, true);
+  assert(contentFact !== undefined);
   assertEquals(codeLineFact, undefined);
 });
 
@@ -133,8 +133,8 @@ Deno.test("extractFactsFromTree_HorizontalRule_SkipsThematicBreaks", () => {
   const md = "# Section\n\nFirst fact.\n\n---\n\nSecond fact.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.length >= 2, true);
-  assertEquals(facts.every((f) => !f.text.includes("---")), true);
+  assert(facts.length >= 2);
+  assert(facts.every((f) => !f.text.includes("---")));
 });
 
 Deno.test("extractFactsFromTree_HeadingWithInlineCode_ExtractsHeadingText", () => {
@@ -142,31 +142,31 @@ Deno.test("extractFactsFromTree_HeadingWithInlineCode_ExtractsHeadingText", () =
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const codeSectionFact = facts.find((f) => f.sourceSection === "The extractFacts function");
-  assertEquals(codeSectionFact !== undefined, true);
+  assert(codeSectionFact !== undefined);
 });
 
 Deno.test("extractFactsFromTree_OrderedList_ExtractsListItems", () => {
   const md = "## Steps\n\n1. First step is important.\n2. Second step follows.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.some((f) => f.text.includes("First step")), true);
-  assertEquals(facts.some((f) => f.text.includes("Second step")), true);
+  assert(facts.some((f) => f.text.includes("First step")));
+  assert(facts.some((f) => f.text.includes("Second step")));
 });
 
 Deno.test("extractFactsFromTree_ExclamationSplit_SplitsIntoFacts", () => {
   const md = "GLOP is amazing! It never sleeps.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.length >= 2, true);
-  assertEquals(facts.some((f) => f.text.includes("amazing")), true);
+  assert(facts.length >= 2);
+  assert(facts.some((f) => f.text.includes("amazing")));
 });
 
 Deno.test("extractFactsFromTree_QuestionSplit_SplitsIntoFacts", () => {
   const md = "What is GLOP? A unified planetary system.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.length >= 2, true);
-  assertEquals(facts.some((f) => f.text.includes("unified")), true);
+  assert(facts.length >= 2);
+  assert(facts.some((f) => f.text.includes("unified")));
 });
 
 Deno.test("extractFactsFromTree_BoldInline_ExtractsTextContent", () => {
@@ -174,7 +174,7 @@ Deno.test("extractFactsFromTree_BoldInline_ExtractsTextContent", () => {
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const boldFact = facts.find((f) => f.text.includes("absolutely"));
-  assertEquals(boldFact !== undefined, true);
+  assert(boldFact !== undefined);
 });
 
 Deno.test("extractFactsFromTree_HTMLBlock_SkipsHtmlNodes", () => {
@@ -182,15 +182,15 @@ Deno.test("extractFactsFromTree_HTMLBlock_SkipsHtmlNodes", () => {
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
   const visibleFact = facts.find((f) => f.text.includes("Visible content"));
-  assertEquals(visibleFact !== undefined, true);
+  assert(visibleFact !== undefined);
 });
 
 Deno.test("extractFactsFromTree_DeeplyNestedInline_ExtractsAllText", () => {
   const md = "# Deep\n\nThis is **bold *italic `code`* text** here.";
   const tree: Root = parseMarkdown(md);
   const facts = extractFactsFromTree(tree);
-  assertEquals(facts.length > 0, true);
-  assertEquals(facts[0].text.includes("code"), true);
+  assert(facts.length > 0);
+  assert(facts[0].text.includes("code"));
 });
 
 Deno.test("extractFactsFromTree_MultipleHeadings_TracksSectionChanges", () => {
@@ -220,8 +220,8 @@ Deno.test("extractFactsWithLLM_ValidResponse_ReturnsFacts", async () => {
   try {
     const facts = await extractFactsWithLLM("GLOP is a unified planetary system. GLOP is managed by the Core Consensus Engine.");
     assertEquals(facts.length, 2);
-    assertEquals(facts[0].text.includes("GLOP"), true);
-    assertEquals("id" in facts[0], true);
+    assert(facts[0].text.includes("GLOP"));
+    assert("id" in facts[0]);
   } finally {
     fetchStub.restore();
   }
@@ -230,9 +230,8 @@ Deno.test("extractFactsWithLLM_ValidResponse_ReturnsFacts", async () => {
 Deno.test("extractFactsWithLLM_SendsCorrectUrlAndModel_PostsToGenerateApi", async () => {
   let calledUrl = "";
   let calledBody = "";
-  const fetchStub = stub(globalThis, "fetch", (_input: URL | RequestInfo, init?: RequestInit) => {
-    const input = _input as string;
-    calledUrl = input;
+  const fetchStub = stub(globalThis, "fetch", (input: URL | RequestInfo, init?: RequestInit) => {
+    calledUrl = input as string;
     calledBody = init?.body as string;
     return Promise.resolve(
       new Response(JSON.stringify({ response: JSON.stringify([{ text: "A fact." }]) })),
@@ -244,7 +243,7 @@ Deno.test("extractFactsWithLLM_SendsCorrectUrlAndModel_PostsToGenerateApi", asyn
     const body = JSON.parse(calledBody);
     assertEquals(body.model, "llama3");
     assertEquals(body.stream, false);
-    assertEquals(body.prompt.includes("Some text"), true);
+    assert(body.prompt.includes("Some text"));
   } finally {
     fetchStub.restore();
   }
