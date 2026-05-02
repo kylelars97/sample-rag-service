@@ -10,8 +10,17 @@ interface QueryResult {
   readonly facts: readonly string[];
 }
 
+interface TestCaseResult {
+  readonly prompt: string;
+  readonly expected: string;
+  readonly actual: string;
+  readonly passed: boolean;
+}
+
 const PROMPTS_PATH = new URL("../test/prompts.json", import.meta.url).pathname;
 const RAG_SERVICE_URL = Deno.env.get("RAG_SERVICE_URL") ?? "http://localhost:3000";
+const MATCH_RATIO_THRESHOLD = 0.4;
+const PASS_RATE_THRESHOLD = 0.6;
 
 async function loadPrompts(): Promise<readonly PromptCase[]> {
   const text = await Deno.readTextFile(PROMPTS_PATH);
@@ -39,12 +48,25 @@ async function checkHealth(): Promise<boolean> {
   }
 }
 
-Deno.test("Acceptance_RagService_HealthEndpoint_Responds", async () => {
+function extractExpectedTerms(expectedResponse: string): readonly string[] {
+  return expectedResponse
+    .split(/[\s,;.()]+/)
+    .filter((w) => w.length > 3)
+    .map((w) => w.toLowerCase());
+}
+
+function computeMatchRatio(answer: string, expectedTerms: readonly string[]): number {
+  const answerLower = answer.toLowerCase();
+  const matchedTerms = expectedTerms.filter((term) => answerLower.includes(term));
+  return matchedTerms.length / Math.max(expectedTerms.length, 1);
+}
+
+Deno.test("HealthEndpoint_WhenServiceRunning_RespondsOk", async () => {
   const healthy = await checkHealth();
   assert(healthy, "RAG service health check failed — is the service running?");
 });
 
-Deno.test("Acceptance_PromptsFile_ContainsAllTestCases", async () => {
+Deno.test("PromptsFile_WhenLoaded_ContainsAllTestCases", async () => {
   const prompts = await loadPrompts();
   assert(prompts.length >= 10, `Expected at least 10 prompts, got ${prompts.length}`);
   for (const p of prompts) {
@@ -53,7 +75,7 @@ Deno.test("Acceptance_PromptsFile_ContainsAllTestCases", async () => {
   }
 });
 
-Deno.test("Acceptance_QueryEndpoint_ReturnsValidStructure", async () => {
+Deno.test("QueryEndpoint_WhenQueried_ReturnsValidStructure", async () => {
   const prompts = await loadPrompts();
   const first = prompts[0];
   const result = await queryRagService(first.prompt);
@@ -63,47 +85,40 @@ Deno.test("Acceptance_QueryEndpoint_ReturnsValidStructure", async () => {
   assert(Array.isArray(result.facts));
 });
 
-Deno.test("Acceptance_QueryEndpoint_AnswerContainsRelevantContent", async () => {
+Deno.test("QueryEndpoint_WhenQueried_AnswerContainsRelevantContent", async () => {
   const prompts = await loadPrompts();
-  const results: { prompt: string; expected: string; actual: string }[] = [];
-  let passCount = 0;
+  const results: TestCaseResult[] = [];
 
   for (const tc of prompts) {
     const result = await queryRagService(tc.prompt);
-    const answerLower = result.answer.toLowerCase();
-    const expectedTerms = tc.expectedResponse
-      .split(/[\s,;.()]+/)
-      .filter((w) => w.length > 3)
-      .map((w) => w.toLowerCase());
-
-    const matchedTerms = expectedTerms.filter((term) => answerLower.includes(term));
-    const matchRatio = matchedTerms.length / Math.max(expectedTerms.length, 1);
-    const passed = matchRatio >= 0.4;
+    const expectedTerms = extractExpectedTerms(tc.expectedResponse);
+    const matchRatio = computeMatchRatio(result.answer, expectedTerms);
+    const passed = matchRatio >= MATCH_RATIO_THRESHOLD;
 
     results.push({
       prompt: tc.prompt,
       expected: tc.expectedResponse,
       actual: result.answer,
+      passed,
     });
-
-    if (passed) passCount++;
   }
 
+  const passCount = results.filter((r) => r.passed).length;
   const passRate = passCount / prompts.length;
+  const failedCases = results
+    .filter((r) => !r.passed)
+    .map((r) => `  Q: ${r.prompt}\n  Expected: ${r.expected}\n  Got: ${r.actual}`)
+    .join("\n");
+
   assert(
-    passRate >= 0.6,
-    `Only ${passCount}/${prompts.length} prompts had acceptable answers (pass rate: ${(passRate * 100).toFixed(1)}%, threshold: 60%). ` +
-    `Failed cases:\n${results.filter((_, i) => {
-      const r = results[i];
-      const answerLower = r.actual.toLowerCase();
-      const expectedTerms = r.expected.split(/[\s,;.()]+/).filter((w) => w.length > 3).map((w) => w.toLowerCase());
-      const matchedTerms = expectedTerms.filter((term) => answerLower.includes(term));
-      return matchedTerms.length / Math.max(expectedTerms.length, 1) < 0.4;
-    }).map((r) => `  Q: ${r.prompt}\n  Expected: ${r.expected}\n  Got: ${r.actual}`).join("\n")}`,
+    passRate >= PASS_RATE_THRESHOLD,
+    `Only ${passCount}/${prompts.length} prompts had acceptable answers ` +
+    `(pass rate: ${(passRate * 100).toFixed(1)}%, threshold: 60%). ` +
+    `Failed cases:\n${failedCases}`,
   );
 });
 
-Deno.test("Acceptance_QueryEndpoint_ReturnsFacts", async () => {
+Deno.test("QueryEndpoint_WhenQueried_ReturnsFacts", async () => {
   const prompts = await loadPrompts();
   const result = await queryRagService(prompts[0].prompt);
   assert(result.facts.length > 0, "RAG service should return at least one fact");

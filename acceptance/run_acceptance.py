@@ -15,12 +15,11 @@ import json
 import os
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
-from rhesis.sdk import RhesisClient, ExecutionMode
-from rhesis.sdk.entities import TestSets, Endpoints
 from rhesis.sdk.models import get_model
-from rhesis.sdk.synthesizers import PromptSynthesizer
 
 RAG_SERVICE_URL = os.environ.get("RAG_SERVICE_URL", "http://localhost:3000")
 PROMPTS_PATH = Path(__file__).parent.parent / "test" / "prompts.json"
@@ -32,8 +31,6 @@ def load_prompts() -> list[dict]:
 
 
 def wait_for_rag_service(url: str, timeout: int = 30) -> None:
-    import urllib.request
-    import urllib.error
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -47,9 +44,20 @@ def wait_for_rag_service(url: str, timeout: int = 30) -> None:
     raise RuntimeError(f"RAG service not available at {url} after {timeout}s")
 
 
-def run_acceptance_tests() -> dict:
-    client = RhesisClient.from_environment()
+def query_rag_service(prompt_text: str) -> str:
+    payload = json.dumps({"prompt": prompt_text}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{RAG_SERVICE_URL}/query",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        result = json.loads(resp.read().decode("utf-8"))
+    return result.get("answer", "")
 
+
+def run_acceptance_tests() -> dict:
     prompts = load_prompts()
     obs_model = get_model("ollama/llama3")
 
@@ -57,20 +65,7 @@ def run_acceptance_tests() -> dict:
     for item in prompts:
         prompt_text = item["prompt"]
         expected = item["expectedResponse"]
-
-        import urllib.request
-        import urllib.error
-        payload = json.dumps({"prompt": prompt_text}).encode("utf-8")
-        req = urllib.request.Request(
-            f"{RAG_SERVICE_URL}/query",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
-
-        answer = result.get("answer", "")
+        answer = query_rag_service(prompt_text)
         test_input_outputs.append({
             "input": prompt_text,
             "output": answer,
@@ -82,13 +77,13 @@ def run_acceptance_tests() -> dict:
 
     for entry in test_input_outputs:
         judgment_prompt = (
-            f"You are evaluating whether a RAG system's answer contains the key information "
-            f"from the expected response.\n\n"
+            "You are evaluating whether a RAG system's answer contains the key information "
+            "from the expected response.\n\n"
             f"Question: {entry['input']}\n"
             f"Expected key information: {entry['expected_output']}\n"
             f"Actual answer: {entry['output']}\n\n"
-            f"Does the actual answer contain the key information from the expected response? "
-            f"Answer only 'yes' or 'no'."
+            "Does the actual answer contain the key information from the expected response? "
+            "Answer only 'yes' or 'no'."
         )
         judgment = obs_model.generate(prompt=judgment_prompt).strip().lower()
         passed = judgment.startswith("yes")
