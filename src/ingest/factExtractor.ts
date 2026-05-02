@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Root, Content } from "mdast";
 import type { Fact } from "../types.js";
+import { OLLAMA_BASE_URL, OLLAMA_CHAT_MODEL } from "../config.js";
 
 type NodeWithChildren = { readonly children: readonly Content[] };
 
@@ -100,4 +101,62 @@ function splitSentences(text: string): readonly string[] {
   return text
     .split(/(?<=[.!?])\s+/u)
     .filter((s) => s.trim().length > 0);
+}
+
+interface LLMFact {
+  readonly text: string;
+  readonly sourceSection?: string;
+  readonly tags?: readonly string[];
+}
+
+export async function extractFactsWithLLM(text: string): Promise<readonly Fact[]> {
+  const prompt = `Convert the following text into atomic factual statements.
+Each fact must be:
+- single idea
+- self-contained
+- non-overlapping
+
+Return a JSON array of objects with "text" (required), "sourceSection" (optional), and "tags" (optional array of strings).
+
+TEXT:
+${text}
+
+Return JSON array of facts.`;
+
+  const res = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: OLLAMA_CHAT_MODEL, prompt, stream: false }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`LLM fact extraction failed: ${res.statusText}`);
+  }
+
+  const { response } = (await res.json()) as { response: string };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(response);
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  const facts: Fact[] = [];
+  for (const item of parsed) {
+    if (typeof item !== "object" || item === null) continue;
+    const obj = item as Record<string, unknown>;
+    if (typeof obj.text !== "string") continue;
+    facts.push({
+      id: uuidv4(),
+      text: obj.text,
+      ...(typeof obj.sourceSection === "string" ? { sourceSection: obj.sourceSection } : {}),
+      ...(Array.isArray(obj.tags) ? { tags: obj.tags as readonly string[] } : {}),
+    });
+  }
+  return facts;
 }

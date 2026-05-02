@@ -1,7 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { extractFactsFromTree } from "../src/ingest/factExtractor.js";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { extractFactsFromTree, extractFactsWithLLM } from "../src/ingest/factExtractor.js";
 import { parseMarkdown } from "../src/ingest/markdownParser.js";
 import type { Root } from "mdast";
+
+const mockFetch = vi.fn();
+vi.stubGlobal("fetch", mockFetch);
 
 describe("extractFactsFromTree", () => {
   it("extractFactsFromTree_SimpleParagraph_ReturnsFact", () => {
@@ -203,5 +206,90 @@ describe("extractFactsFromTree", () => {
     expect(alphaFact?.sourceSection).toBe("Alpha");
     expect(betaFact?.sourceSection).toBe("Beta");
     expect(gammaFact?.sourceSection).toBe("Gamma");
+  });
+});
+
+describe("extractFactsWithLLM", () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+  });
+
+  it("extractFactsWithLLM_ValidResponse_ReturnsFacts", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        response: JSON.stringify([
+          { text: "GLOP is a unified planetary system.", sourceSection: "Overview", tags: ["overview"] },
+          { text: "GLOP is managed by the Core Consensus Engine.", sourceSection: "Governance", tags: ["governance"] },
+        ]),
+      }),
+    });
+    const facts = await extractFactsWithLLM("GLOP is a unified planetary system. GLOP is managed by the Core Consensus Engine.");
+    expect(facts.length).toBe(2);
+    expect(facts[0].text).toContain("GLOP");
+    expect(facts[0]).toHaveProperty("id");
+  });
+
+  it("extractFactsWithLLM_SendsCorrectUrlAndModel_PostsToGenerateApi", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        response: JSON.stringify([{ text: "A fact." }]),
+      }),
+    });
+    await extractFactsWithLLM("Some text");
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    const callOpts = mockFetch.mock.calls[0][1] as RequestInit;
+    expect(callUrl).toBe("http://localhost:11434/api/generate");
+    const body = JSON.parse(callOpts.body as string);
+    expect(body.model).toBe("llama3");
+    expect(body.stream).toBe(false);
+    expect(body.prompt).toContain("Some text");
+  });
+
+  it("extractFactsWithLLM_FailedFetch_ThrowsError", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, statusText: "Service Unavailable" });
+    await expect(extractFactsWithLLM("text")).rejects.toThrow();
+  });
+
+  it("extractFactsWithLLM_MalformedJsonResponse_ReturnsEmptyArray", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ response: "not valid json [[" }),
+    });
+    const facts = await extractFactsWithLLM("text");
+    expect(facts).toEqual([]);
+  });
+
+  it("extractFactsWithLLM_ResponseWithMissingFields_UsesDefaults", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        response: JSON.stringify([{ text: "A fact without section." }]),
+      }),
+    });
+    const facts = await extractFactsWithLLM("text");
+    expect(facts.length).toBe(1);
+    expect(facts[0].text).toBe("A fact without section.");
+    expect(facts[0].sourceSection).toBeUndefined();
+    expect(facts[0].tags).toBeUndefined();
+  });
+
+  it("extractFactsWithLLM_EmptyArrayResponse_ReturnsEmptyArray", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ response: "[]" }),
+    });
+    const facts = await extractFactsWithLLM("text");
+    expect(facts).toEqual([]);
+  });
+
+  it("extractFactsWithLLM_NonArrayResponse_ReturnsEmptyArray", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ response: JSON.stringify({ text: "not an array" }) }),
+    });
+    const facts = await extractFactsWithLLM("text");
+    expect(facts).toEqual([]);
   });
 });
