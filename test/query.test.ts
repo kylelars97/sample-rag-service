@@ -43,13 +43,6 @@ describe("runRagQuery", () => {
   });
 
   it("runRagQuery_GenerationFailure_ThrowsError", async () => {
-    const mockSearch = vi.fn().mockResolvedValue([
-      { payload: { text: "GLOP is a planet." }, score: 0.95 },
-    ]);
-    vi.doMock("../src/vector/qdrantClient.js", () => ({
-      getQdrantClient: () => ({ search: mockSearch }),
-      ensureCollection: vi.fn().mockResolvedValue(undefined),
-    }));
     mockFetch
       .mockResolvedValueOnce({
         ok: true,

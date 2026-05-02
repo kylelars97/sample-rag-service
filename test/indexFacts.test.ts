@@ -3,14 +3,12 @@ import { indexFacts } from "../src/ingest/indexFacts.js";
 import type { EmbeddedFact } from "../src/types.js";
 
 const mockUpsert = vi.fn().mockResolvedValue(undefined);
-const mockGetCollection = vi.fn().mockRejectedValue(new Error("not found"));
-const mockCreateCollection = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("../src/vector/qdrantClient.js", () => ({
   getQdrantClient: () => ({
     upsert: mockUpsert,
-    getCollection: mockGetCollection,
-    createCollection: mockCreateCollection,
+    getCollection: vi.fn().mockRejectedValue(new Error("not found")),
+    createCollection: vi.fn().mockResolvedValue(undefined),
   }),
   ensureCollection: vi.fn().mockResolvedValue(undefined),
 }));

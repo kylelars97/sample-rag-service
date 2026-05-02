@@ -7,6 +7,8 @@ vi.mock("../src/vector/qdrantClient.js", () => ({
   getQdrantClient: () => ({ search: mockSearch }),
 }));
 
+const defaultEmbedding: readonly number[] = new Array(768).fill(0.5);
+
 describe("searchFacts", () => {
   beforeEach(() => {
     mockSearch.mockReset();
@@ -16,8 +18,7 @@ describe("searchFacts", () => {
   });
 
   it("searchFacts_QueryEmbedding_ReturnsFactTexts", async () => {
-    const queryEmbedding: readonly number[] = new Array(768).fill(0.5);
-    const results = await searchFacts(queryEmbedding);
+    const results = await searchFacts(defaultEmbedding);
     expect(results.length).toBeGreaterThan(0);
     expect(results[0]).toContain("GLOP");
   });
@@ -30,8 +31,7 @@ describe("searchFacts", () => {
 
   it("searchFacts_EmptyResults_ReturnsEmptyArray", async () => {
     mockSearch.mockResolvedValue([]);
-    const queryEmbedding: readonly number[] = new Array(768).fill(0.5);
-    const results = await searchFacts(queryEmbedding);
+    const results = await searchFacts(defaultEmbedding);
     expect(results).toEqual([]);
   });
 
@@ -40,8 +40,7 @@ describe("searchFacts", () => {
       { payload: null, score: 0.5 },
       { payload: { text: "Valid fact." }, score: 0.8 },
     ]);
-    const queryEmbedding: readonly number[] = new Array(768).fill(0.5);
-    const results = await searchFacts(queryEmbedding);
+    const results = await searchFacts(defaultEmbedding);
     expect(results[0]).toBe("");
     expect(results[1]).toBe("Valid fact.");
   });
@@ -50,8 +49,7 @@ describe("searchFacts", () => {
     mockSearch.mockResolvedValue([
       { payload: { otherField: "not text" }, score: 0.5 },
     ]);
-    const queryEmbedding: readonly number[] = new Array(768).fill(0.5);
-    const results = await searchFacts(queryEmbedding);
+    const results = await searchFacts(defaultEmbedding);
     expect(results[0]).toBe("");
   });
 });
