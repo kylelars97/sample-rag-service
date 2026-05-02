@@ -82,4 +82,24 @@ describe("/query route", () => {
     });
     expect(response.statusCode).toBe(400);
   });
+
+  it("queryRoute_NullBody_Returns400", async () => {
+    const server = buildServer();
+    const response = await server.inject({
+      method: "POST",
+      url: "/query",
+      payload: null,
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("queryRoute_ArrayBody_Returns400", async () => {
+    const server = buildServer();
+    const response = await server.inject({
+      method: "POST",
+      url: "/query",
+      payload: [],
+    });
+    expect(response.statusCode).toBe(400);
+  });
 });

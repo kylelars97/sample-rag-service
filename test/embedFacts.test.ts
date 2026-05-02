@@ -20,6 +20,21 @@ describe("embedText", () => {
     expect(result).toEqual(fakeEmbedding);
   });
 
+  it("embedText_SendsCorrectUrlAndModel_PostsToApi", async () => {
+    const fakeEmbedding = new Array(768).fill(0.1);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ embedding: fakeEmbedding }),
+    });
+    await embedText("test input");
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    const callOpts = mockFetch.mock.calls[0][1] as RequestInit;
+    expect(callUrl).toBe("http://localhost:11434/api/embeddings");
+    const body = JSON.parse(callOpts.body as string);
+    expect(body.model).toBe("nomic-embed-text");
+    expect(body.prompt).toBe("test input");
+  });
+
   it("embedText_FailedFetch_ThrowsError", async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, statusText: "Bad Request" });
     await expect(embedText("hello")).rejects.toThrow();

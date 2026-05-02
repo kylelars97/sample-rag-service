@@ -34,4 +34,19 @@ describe("generateAnswer", () => {
     const result = await generateAnswer("What is GLOP?", []);
     expect(result).toContain("don't know");
   });
+
+  it("generateAnswer_WithFacts_SendsPromptContainingFacts", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ response: "Answer" }),
+    });
+    const facts = ["Fact A.", "Fact B."];
+    await generateAnswer("What?", facts);
+    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body as string);
+    expect(callBody.prompt).toContain("Fact A.");
+    expect(callBody.prompt).toContain("Fact B.");
+    expect(callBody.prompt).toContain("What?");
+    expect(callBody.model).toBe("llama3");
+    expect(callBody.stream).toBe(false);
+  });
 });

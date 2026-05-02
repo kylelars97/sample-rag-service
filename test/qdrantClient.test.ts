@@ -21,4 +21,21 @@ describe("ensureCollection", () => {
   it("ensureCollection_CollectionDoesNotExist_CreatesCollection", async () => {
     await expect(ensureCollection()).resolves.not.toThrow();
   });
+
+  it("ensureCollection_CollectionAlreadyExists_SkipsCreation", async () => {
+    vi.resetModules();
+    const mockGetCollection = vi.fn().mockResolvedValue({});
+    const mockCreateCollection = vi.fn().mockResolvedValue(undefined);
+    vi.doMock("@qdrant/js-client-rest", () => ({
+      QdrantClient: vi.fn().mockImplementation(() => ({
+        getCollection: mockGetCollection,
+        createCollection: mockCreateCollection,
+      })),
+    }));
+    const { ensureCollection: freshEnsure } = await import("../src/vector/qdrantClient.js");
+    await freshEnsure();
+    expect(mockGetCollection).toHaveBeenCalled();
+    expect(mockCreateCollection).not.toHaveBeenCalled();
+    vi.doUnmock("@qdrant/js-client-rest");
+  });
 });
