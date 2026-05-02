@@ -21,8 +21,11 @@
 // Or add to package.json:
 //   "scripts": { "sandcastle": "npx tsx .sandcastle/main.mts" }
 
+import { config } from "dotenv";
 import * as sandcastle from "@ai-hero/sandcastle";
 import { docker } from "@ai-hero/sandcastle/sandboxes/docker";
+
+config({ path: new URL(".env", import.meta.url).pathname });
 
 // ---------------------------------------------------------------------------
 // Configuration
