@@ -13,6 +13,19 @@ describe("buildServer", () => {
   });
 });
 
+describe("GET / health check", () => {
+  it("healthCheck_ReturnsOk", async () => {
+    const server = buildServer();
+    const response = await server.inject({
+      method: "GET",
+      url: "/",
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { status: string };
+    expect(body.status).toBe("ok");
+  });
+});
+
 describe("/query route", () => {
   it("queryRoute_ValidPrompt_ReturnsAnswerAndFacts", async () => {
     mockRunRagQuery.mockResolvedValueOnce({
@@ -47,6 +60,16 @@ describe("/query route", () => {
       method: "POST",
       url: "/query",
       payload: { prompt: "" },
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("queryRoute_NonStringPrompt_Returns400", async () => {
+    const server = buildServer();
+    const response = await server.inject({
+      method: "POST",
+      url: "/query",
+      payload: { prompt: 123 },
     });
     expect(response.statusCode).toBe(400);
   });

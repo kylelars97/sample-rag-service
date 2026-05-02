@@ -2,6 +2,10 @@ import type { FastifyInstance } from "fastify";
 import { runRagQuery } from "../rag/query.js";
 
 export function registerRoutes(server: FastifyInstance): void {
+  server.get("/", async (_request, reply) => {
+    return reply.send({ status: "ok" });
+  });
+
   server.post("/query", async (request, reply) => {
     const body = request.body as { prompt?: string };
     if (!body.prompt || typeof body.prompt !== "string") {

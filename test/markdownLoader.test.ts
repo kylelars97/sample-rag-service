@@ -17,4 +17,13 @@ describe("loadMarkdown", () => {
   it("loadMarkdown_FileNotFound_ThrowsError", async () => {
     await expect(loadMarkdown("/nonexistent/path.md")).rejects.toThrow();
   });
+
+  it("loadMarkdown_EmptyFile_ReturnsEmptyString", async () => {
+    const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "md-test-"));
+    const tmpFile = path.join(tmpDir, "empty.md");
+    await fs.writeFile(tmpFile, "");
+    const content = await loadMarkdown(tmpFile);
+    expect(content).toBe("");
+    await fs.rm(tmpDir, { recursive: true });
+  });
 });

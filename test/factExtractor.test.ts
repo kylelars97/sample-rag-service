@@ -144,4 +144,64 @@ describe("extractFactsFromTree", () => {
     const codeSectionFact = facts.find((f) => f.sourceSection === "The extractFacts function");
     expect(codeSectionFact).toBeDefined();
   });
+
+  it("extractFactsFromTree_OrderedList_ExtractsListItems", () => {
+    const md = "## Steps\n\n1. First step is important.\n2. Second step follows.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    expect(facts.some((f) => f.text.includes("First step"))).toBe(true);
+    expect(facts.some((f) => f.text.includes("Second step"))).toBe(true);
+  });
+
+  it("extractFactsFromTree_ExclamationSplit_SplitsIntoFacts", () => {
+    const md = "GLOP is amazing! It never sleeps.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    expect(facts.length).toBeGreaterThanOrEqual(2);
+    expect(facts.some((f) => f.text.includes("amazing"))).toBe(true);
+  });
+
+  it("extractFactsFromTree_QuestionSplit_SplitsIntoFacts", () => {
+    const md = "What is GLOP? A unified planetary system.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    expect(facts.length).toBeGreaterThanOrEqual(2);
+    expect(facts.some((f) => f.text.includes("unified"))).toBe(true);
+  });
+
+  it("extractFactsFromTree_BoldInline_ExtractsTextContent", () => {
+    const md = "# Intro\n\nGLOP is **absolutely** unified.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const boldFact = facts.find((f) => f.text.includes("absolutely"));
+    expect(boldFact).toBeDefined();
+  });
+
+  it("extractFactsFromTree_HTMLBlock_SkipsHtmlNodes", () => {
+    const md = "# Section\n\n<div>Some HTML content</div>\n\nVisible content.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const visibleFact = facts.find((f) => f.text.includes("Visible content"));
+    expect(visibleFact).toBeDefined();
+  });
+
+  it("extractFactsFromTree_DeeplyNestedInline_ExtractsAllText", () => {
+    const md = "# Deep\n\nThis is **bold *italic `code`* text** here.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    expect(facts.length).toBeGreaterThan(0);
+    expect(facts[0].text).toContain("code");
+  });
+
+  it("extractFactsFromTree_MultipleHeadings_TracksSectionChanges", () => {
+    const md = "# Alpha\n\nAlpha fact.\n\n## Beta\n\nBeta fact.\n\n# Gamma\n\nGamma fact.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const alphaFact = facts.find((f) => f.text.includes("Alpha fact"));
+    const betaFact = facts.find((f) => f.text.includes("Beta fact"));
+    const gammaFact = facts.find((f) => f.text.includes("Gamma fact"));
+    expect(alphaFact?.sourceSection).toBe("Alpha");
+    expect(betaFact?.sourceSection).toBe("Beta");
+    expect(gammaFact?.sourceSection).toBe("Gamma");
+  });
 });
