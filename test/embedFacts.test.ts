@@ -45,4 +45,26 @@ describe("embedFacts", () => {
     expect(result.length).toBe(2);
     expect(result[0].embedding).toEqual(fakeEmbedding);
   });
+
+  it("embedFacts_EmptyArray_ReturnsEmptyArray", async () => {
+    const result: readonly EmbeddedFact[] = await embedFacts([]);
+    expect(result).toEqual([]);
+  });
+
+  it("embedFacts_PreservesFactFields_ReturnsAllFields", async () => {
+    const fakeEmbedding = new Array(768).fill(0.3);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ embedding: fakeEmbedding }),
+    });
+    const facts: readonly Fact[] = [
+      { id: "1", text: "Fact one", sourceSection: "Intro", tags: ["intro"] },
+    ];
+    const result = await embedFacts(facts);
+    expect(result[0].id).toBe("1");
+    expect(result[0].text).toBe("Fact one");
+    expect(result[0].sourceSection).toBe("Intro");
+    expect(result[0].tags).toEqual(["intro"]);
+    expect(result[0].embedding).toEqual(fakeEmbedding);
+  });
 });

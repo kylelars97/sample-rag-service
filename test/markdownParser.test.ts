@@ -21,4 +21,17 @@ describe("parseMarkdown", () => {
     const tree = parseMarkdown(md);
     expect(tree.type).toBe("root");
   });
+
+  it("parseMarkdown_ParsesList_ReturnsListNode", () => {
+    const md = "- item one\n- item two";
+    const tree = parseMarkdown(md);
+    const hasList = tree.children.some((c) => c.type === "list");
+    expect(hasList).toBe(true);
+  });
+
+  it("parseMarkdown_ParsesInlineFormatting_ReturnsTextContent", () => {
+    const md = "This is **bold** and *italic* text.";
+    const tree = parseMarkdown(md);
+    expect(tree.children.length).toBeGreaterThan(0);
+  });
 });

@@ -39,7 +39,7 @@ export function extractFactsFromTree(tree: Root): readonly Fact[] {
     }
 
     if ("children" in node) {
-      for (const child of (node as { children: Content[] }).children) {
+      for (const child of (node as { readonly children: readonly Content[] }).children) {
         processNode(child);
       }
     }
@@ -56,7 +56,9 @@ function createFact(text: string, sourceSection?: string): Fact {
   return {
     id: uuidv4(),
     text,
-    ...(sourceSection !== undefined ? { sourceSection } : {}),
+    ...(sourceSection !== undefined
+      ? { sourceSection, tags: [sourceSection.toLowerCase()] }
+      : {}),
   };
 }
 
@@ -67,7 +69,7 @@ function extractHeadingText(node: Content): string {
     if (child.type === "text") {
       parts.push(child.value);
     } else if ("children" in child) {
-      for (const sub of (child as { children: Content[] }).children) {
+      for (const sub of (child as { readonly children: readonly Content[] }).children) {
         if (sub.type === "text") {
           parts.push(sub.value);
         }

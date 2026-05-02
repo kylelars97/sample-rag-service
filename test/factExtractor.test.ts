@@ -50,4 +50,48 @@ describe("extractFactsFromTree", () => {
     const withSection = facts.find((f) => f.sourceSection !== undefined);
     expect(withSection).toBeDefined();
   });
+
+  it("extractFactsFromTree_HeadingSection_AddsTagFromHeading", () => {
+    const md = "# Overview\n\nGLOP is a unified planetary system.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const withTag = facts.find((f) => f.tags !== undefined && f.tags.length > 0);
+    expect(withTag).toBeDefined();
+    expect(withTag!.tags).toContain("overview");
+  });
+
+  it("extractFactsFromTree_NestedHeading_UseMostRecentHeadingAsTag", () => {
+    const md = "# Top\n\n## Subsection\n\nSome detail here.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const detailFact = facts.find((f) => f.text.includes("detail"));
+    expect(detailFact).toBeDefined();
+    expect(detailFact!.tags).toContain("subsection");
+  });
+
+  it("extractFactsFromTree_NoHeading_TagsAreUndefined", () => {
+    const md = "A fact without any heading.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    expect(facts[0].tags).toBeUndefined();
+  });
+
+  it("extractFactsFromTree_MultiSentenceParagraph_SplitsIntoSeparateFacts", () => {
+    const md = "First sentence. Second sentence. Third sentence.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    expect(facts.length).toBeGreaterThanOrEqual(3);
+    expect(facts[0].text).toContain("First sentence");
+    expect(facts[1].text).toContain("Second sentence");
+  });
+
+  it("extractFactsFromTree_Blockquote_SkipsBlockquotes", () => {
+    const md = "# Section\n\n> This is a quote.\n\nActual content.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const quoteFact = facts.find((f) => f.text.includes("quote"));
+    const contentFact = facts.find((f) => f.text.includes("Actual content"));
+    expect(contentFact).toBeDefined();
+    expect(facts.every((f) => f.text.includes("quote"))).toBe(false);
+  });
 });

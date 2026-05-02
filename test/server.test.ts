@@ -1,16 +1,53 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { buildServer } from "../src/api/server.js";
 
+const mockRunRagQuery = vi.fn();
 vi.mock("../src/rag/query.js", () => ({
-  runRagQuery: vi.fn().mockResolvedValue({
-    answer: "GLOP is a unified planetary system.",
-    facts: ["GLOP is a unified planetary system."],
-  }),
+  runRagQuery: (...args: readonly unknown[]) => mockRunRagQuery(...args),
 }));
 
 describe("buildServer", () => {
   it("buildServer_CreatesServer_ReturnsFastifyInstance", () => {
     const server = buildServer();
     expect(server).toBeDefined();
+  });
+});
+
+describe("/query route", () => {
+  it("queryRoute_ValidPrompt_ReturnsAnswerAndFacts", async () => {
+    mockRunRagQuery.mockResolvedValueOnce({
+      answer: "GLOP is a unified planetary system.",
+      facts: ["GLOP is a unified planetary system."],
+    });
+    const server = buildServer();
+    const response = await server.inject({
+      method: "POST",
+      url: "/query",
+      payload: { prompt: "What is GLOP?" },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json() as { answer: string; facts: readonly string[] };
+    expect(body.answer).toContain("GLOP");
+    expect(body.facts.length).toBeGreaterThan(0);
+  });
+
+  it("queryRoute_MissingPrompt_Returns400", async () => {
+    const server = buildServer();
+    const response = await server.inject({
+      method: "POST",
+      url: "/query",
+      payload: {},
+    });
+    expect(response.statusCode).toBe(400);
+  });
+
+  it("queryRoute_EmptyPrompt_Returns400", async () => {
+    const server = buildServer();
+    const response = await server.inject({
+      method: "POST",
+      url: "/query",
+      payload: { prompt: "" },
+    });
+    expect(response.statusCode).toBe(400);
   });
 });

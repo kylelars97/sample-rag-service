@@ -23,4 +23,10 @@ describe("searchFacts", () => {
     expect(results.length).toBeGreaterThan(0);
     expect(results[0]).toContain("GLOP");
   });
+
+  it("searchFacts_EmbeddingLength_AcceptsVectors", async () => {
+    const shortEmbedding: readonly number[] = [0.1, 0.2, 0.3];
+    const results = await searchFacts(shortEmbedding);
+    expect(Array.isArray(results)).toBe(true);
+  });
 });

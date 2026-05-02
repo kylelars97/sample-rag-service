@@ -25,4 +25,13 @@ describe("generateAnswer", () => {
       generateAnswer("What is GLOP?", ["fact"])
     ).rejects.toThrow();
   });
+
+  it("generateAnswer_EmptyFactsList_ReturnsAnswer", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ response: "I don't know." }),
+    });
+    const result = await generateAnswer("What is GLOP?", []);
+    expect(result).toContain("don't know");
+  });
 });
