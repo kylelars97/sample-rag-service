@@ -88,7 +88,7 @@ const copyToWorktree = ["node_modules"];
       );
     }
 
-    const { issues } = JSON.parse(planMatch[1]!) as {
+    const { issues } = JSON.parse(planMatch[1]!.trim()) as {
       issues: { id: string; title: string; branch: string }[];
     };
 
