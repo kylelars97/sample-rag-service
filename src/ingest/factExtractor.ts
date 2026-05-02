@@ -13,6 +13,10 @@ function collectTextChildren(children: readonly Content[]): string[] {
   for (const child of children) {
     if (child.type === "text") {
       parts.push(child.value);
+    } else if (child.type === "inlineCode") {
+      parts.push(child.value);
+    } else if (hasChildren(child)) {
+      parts.push(...collectTextChildren(child.children));
     }
   }
   return parts;
@@ -54,6 +58,22 @@ export function extractFactsFromTree(tree: Root): readonly Fact[] {
       return;
     }
 
+    if (node.type === "blockquote") {
+      return;
+    }
+
+    if (node.type === "thematicBreak") {
+      return;
+    }
+
+    if (node.type === "code") {
+      return;
+    }
+
+    if (node.type === "html") {
+      return;
+    }
+
     if (hasChildren(node)) {
       for (const child of node.children) {
         processNode(child);
@@ -84,6 +104,8 @@ function extractHeadingText(node: Content): string {
   for (const child of node.children) {
     if (child.type === "text") {
       parts.push(child.value);
+    } else if (child.type === "inlineCode") {
+      parts.push(child.value);
     } else if (hasChildren(child)) {
       parts.push(...collectTextChildren(child.children));
     }
@@ -97,7 +119,13 @@ function extractParagraphText(node: Content): string {
   for (const child of node.children) {
     if (child.type === "text") {
       parts.push(child.value);
+    } else if (child.type === "inlineCode") {
+      parts.push(child.value);
+    } else if (child.type === "delete") {
+      parts.push(...collectTextChildren(child.children));
     } else if (child.type === "strong" || child.type === "emphasis") {
+      parts.push(...collectTextChildren(child.children));
+    } else if (child.type === "link") {
       parts.push(...collectTextChildren(child.children));
     }
   }

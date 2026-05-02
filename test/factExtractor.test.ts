@@ -92,6 +92,56 @@ describe("extractFactsFromTree", () => {
     const quoteFact = facts.find((f) => f.text.includes("quote"));
     const contentFact = facts.find((f) => f.text.includes("Actual content"));
     expect(contentFact).toBeDefined();
-    expect(facts.every((f) => f.text.includes("quote"))).toBe(false);
+    expect(quoteFact).toBeUndefined();
+  });
+
+  it("extractFactsFromTree_InlineCode_ExtractsCodeText", () => {
+    const md = "Use the `extractFacts` function to process markdown.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const codeFact = facts.find((f) => f.text.includes("extractFacts"));
+    expect(codeFact).toBeDefined();
+  });
+
+  it("extractFactsFromTree_LinkText_ExtractsLinkLabel", () => {
+    const md = "Read the [documentation](https://example.com) for details.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const linkFact = facts.find((f) => f.text.includes("documentation"));
+    expect(linkFact).toBeDefined();
+  });
+
+  it("extractFactsFromTree_Strikethrough_ExtractsDeletedText", () => {
+    const md = "This is ~~removed text~~ kept text.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const deletedFact = facts.find((f) => f.text.includes("removed text"));
+    expect(deletedFact).toBeDefined();
+  });
+
+  it("extractFactsFromTree_CodeBlock_SkipsCodeBlocks", () => {
+    const md = "# Section\n\n```\nconst x = 1;\n```\n\nActual content.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const codeLineFact = facts.find((f) => f.text.includes("const x"));
+    const contentFact = facts.find((f) => f.text.includes("Actual content"));
+    expect(contentFact).toBeDefined();
+    expect(codeLineFact).toBeUndefined();
+  });
+
+  it("extractFactsFromTree_HorizontalRule_SkipsThematicBreaks", () => {
+    const md = "# Section\n\nFirst fact.\n\n---\n\nSecond fact.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    expect(facts.length).toBeGreaterThanOrEqual(2);
+    expect(facts.every((f) => !f.text.includes("---"))).toBe(true);
+  });
+
+  it("extractFactsFromTree_HeadingWithInlineCode_ExtractsHeadingText", () => {
+    const md = "# The `extractFacts` function\n\nSome content.";
+    const tree: Root = parseMarkdown(md);
+    const facts = extractFactsFromTree(tree);
+    const codeSectionFact = facts.find((f) => f.sourceSection === "The extractFacts function");
+    expect(codeSectionFact).toBeDefined();
   });
 });
