@@ -82,4 +82,14 @@ describe("embedFacts", () => {
     expect(result[0].tags).toEqual(["intro"]);
     expect(result[0].embedding).toEqual(fakeEmbedding);
   });
+
+  it("embedText_MalformedJsonResponse_ThrowsError", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => {
+        throw new Error("Malformed JSON");
+      },
+    });
+    await expect(embedText("broken")).rejects.toThrow();
+  });
 });

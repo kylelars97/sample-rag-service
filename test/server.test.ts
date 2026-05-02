@@ -102,4 +102,15 @@ describe("/query route", () => {
     });
     expect(response.statusCode).toBe(400);
   });
+
+  it("queryRoute_RagQueryThrows_Returns500", async () => {
+    mockRunRagQuery.mockRejectedValueOnce(new Error("Internal failure"));
+    const server = buildServer();
+    const response = await server.inject({
+      method: "POST",
+      url: "/query",
+      payload: { prompt: "What is GLOP?" },
+    });
+    expect(response.statusCode).toBe(500);
+  });
 });

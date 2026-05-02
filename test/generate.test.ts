@@ -49,4 +49,14 @@ describe("generateAnswer", () => {
     expect(callBody.model).toBe("llama3");
     expect(callBody.stream).toBe(false);
   });
+
+  it("generateAnswer_SendsCorrectUrl_PostsToGenerateApi", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ response: "Answer" }),
+    });
+    await generateAnswer("Q?", ["F."]);
+    const callUrl = mockFetch.mock.calls[0][0] as string;
+    expect(callUrl).toBe("http://localhost:11434/api/generate");
+  });
 });

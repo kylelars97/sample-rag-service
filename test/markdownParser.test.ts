@@ -34,4 +34,18 @@ describe("parseMarkdown", () => {
     const tree = parseMarkdown(md);
     expect(tree.children.length).toBeGreaterThan(0);
   });
+
+  it("parseMarkdown_ParsesHeadingsWithMultipleLevels_ReturnsAllHeadings", () => {
+    const md = "# H1\n\n## H2\n\n### H3\n\nContent.";
+    const tree = parseMarkdown(md);
+    const headings = tree.children.filter((c) => c.type === "heading");
+    expect(headings.length).toBe(3);
+  });
+
+  it("parseMarkdown_ParsesNestedLists_ReturnsListStructure", () => {
+    const md = "- item one\n  - nested item\n- item two";
+    const tree = parseMarkdown(md);
+    const hasList = tree.children.some((c) => c.type === "list");
+    expect(hasList).toBe(true);
+  });
 });
