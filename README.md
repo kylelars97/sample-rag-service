@@ -84,4 +84,4 @@ All variables have sensible defaults for local development, so copying `.env.exa
 | `deno task dev`       | Start server with watch reload    |
 | `deno task ingest`    | Ingest seed markdown into Qdrant  |
 | `deno task test`      | Run Deno tests                    |
-| `deno task test:shell`| Run shell script tests            |
+| `deno task test:shell` | Run shell script tests            |

@@ -122,9 +122,8 @@ main() {
       usage
       ;;
     *)
-      error "Unknown command: $cmd"
       usage
-      exit 1
+      error "Unknown command: $cmd"
       ;;
   esac
 }
