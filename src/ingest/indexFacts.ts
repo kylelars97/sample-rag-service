@@ -6,7 +6,7 @@ export async function indexFacts(facts: readonly EmbeddedFact[]): Promise<void> 
   await ensureCollection();
   const client = getQdrantClient();
   await client.upsert(QDRANT_COLLECTION, {
-    points: facts.map((fact: EmbeddedFact) => ({
+    points: facts.map((fact) => ({
       id: fact.id,
       vector: [...fact.embedding],
       payload: {

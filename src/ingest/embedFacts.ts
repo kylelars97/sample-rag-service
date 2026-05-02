@@ -10,10 +10,8 @@ export async function embedText(text: string): Promise<readonly number[]> {
   if (!res.ok) {
     throw new Error(`Embedding failed: ${res.statusText}`);
   }
-  const data: { embedding: number[] } = (await res.json()) as {
-    embedding: number[];
-  };
-  return data.embedding;
+  const { embedding } = (await res.json()) as { embedding: number[] };
+  return embedding;
 }
 
 export async function embedFacts(

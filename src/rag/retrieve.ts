@@ -9,10 +9,8 @@ export async function searchFacts(
     vector: [...queryEmbedding],
     limit: 5,
   });
-  return results.map(
-    (r: { payload?: Record<string, unknown> | null }) => {
-      const payload = r.payload as Record<string, unknown> | null | undefined;
-      return (payload?.text as string) ?? "";
-    }
-  );
+  return results.map((r) => {
+    const payload = r.payload as Record<string, unknown> | null | undefined;
+    return (payload?.text as string) ?? "";
+  });
 }

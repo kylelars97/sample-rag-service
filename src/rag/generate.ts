@@ -30,8 +30,6 @@ If the facts do not contain the answer, say you don't know.`;
     throw new Error(`Generation failed: ${res.statusText}`);
   }
 
-  const data: { response: string } = (await res.json()) as {
-    response: string;
-  };
-  return data.response;
+  const { response } = (await res.json()) as { response: string };
+  return response;
 }
