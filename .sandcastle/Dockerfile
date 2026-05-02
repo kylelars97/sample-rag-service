@@ -21,11 +21,9 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
 RUN usermod -d /home/agent -m -l agent node \
     && groupmod -n agent node \
     && chown -R agent:agent /home/agent \
-    && mkdir -p /home/agent \
-    && touch /home/agent/.gitconfig \
-    && chown agent:agent /home/agent/.gitconfig
+    && chmod 1777 /home/agent
 
-RUN git config --system --add safe.directory "/home/agent/workspace"
+RUN git config --system --add safe.directory "*"
 
 # Install OpenCode CLI (run as root before USER agent)
 RUN npm install -g opencode-ai@latest
