@@ -16,5 +16,5 @@ export async function searchFacts(
     vector: [...queryEmbedding],
     limit: 5,
   });
-  return results.map((r) => extractFactText(r.payload as Record<string, unknown> | null | undefined));
+  return results.map((r) => extractFactText(r.payload));
 }

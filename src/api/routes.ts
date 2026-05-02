@@ -7,11 +7,19 @@ export function registerRoutes(server: FastifyInstance): void {
   });
 
   server.post("/query", async (request, reply) => {
-    const body = request.body as { prompt?: string };
-    if (!body.prompt || typeof body.prompt !== "string") {
+    const prompt = extractPrompt(request.body);
+    if (prompt === undefined) {
       return reply.status(400).send({ error: "prompt is required" });
     }
-    const result = await runRagQuery(body.prompt);
+    const result = await runRagQuery(prompt);
     return result;
   });
+}
+
+function extractPrompt(body: unknown): string | undefined {
+  if (typeof body === "object" && body !== null && "prompt" in body) {
+    const { prompt } = body as { prompt: unknown };
+    return typeof prompt === "string" && prompt.length > 0 ? prompt : undefined;
+  }
+  return undefined;
 }
