@@ -292,4 +292,21 @@ describe("extractFactsWithLLM", () => {
     const facts = await extractFactsWithLLM("text");
     expect(facts).toEqual([]);
   });
+
+  it("extractFactsWithLLM_ItemsWithInvalidFields_AreSkipped", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        response: JSON.stringify([
+          { text: "Valid fact." },
+          { text: 123 },
+          { sourceSection: "No text field" },
+          { text: "Has bad tags", tags: ["good", 42] },
+        ]),
+      }),
+    });
+    const facts = await extractFactsWithLLM("text");
+    expect(facts.length).toBe(1);
+    expect(facts[0].text).toBe("Valid fact.");
+  });
 });

@@ -109,6 +109,44 @@ interface LLMFact {
   readonly tags?: readonly string[];
 }
 
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every((el) => typeof el === "string");
+}
+
+function isLLMFact(item: unknown): item is LLMFact {
+  if (typeof item !== "object" || item === null) return false;
+  const obj = item as Record<string, unknown>;
+  if (typeof obj.text !== "string") return false;
+  if (obj.sourceSection !== undefined && typeof obj.sourceSection !== "string") return false;
+  if (obj.tags !== undefined && !isStringArray(obj.tags)) return false;
+  return true;
+}
+
+function parseLLMResponse(response: string): readonly Fact[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(response);
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  const facts: Fact[] = [];
+  for (const item of parsed) {
+    if (!isLLMFact(item)) continue;
+    facts.push({
+      id: uuidv4(),
+      text: item.text,
+      ...(item.sourceSection !== undefined ? { sourceSection: item.sourceSection } : {}),
+      ...(item.tags !== undefined ? { tags: item.tags } : {}),
+    });
+  }
+  return facts;
+}
+
 export async function extractFactsWithLLM(text: string): Promise<readonly Fact[]> {
   const prompt = `Convert the following text into atomic factual statements.
 Each fact must be:
@@ -135,28 +173,5 @@ Return JSON array of facts.`;
 
   const { response } = (await res.json()) as { response: string };
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(response);
-  } catch {
-    return [];
-  }
-
-  if (!Array.isArray(parsed)) {
-    return [];
-  }
-
-  const facts: Fact[] = [];
-  for (const item of parsed) {
-    if (typeof item !== "object" || item === null) continue;
-    const obj = item as Record<string, unknown>;
-    if (typeof obj.text !== "string") continue;
-    facts.push({
-      id: uuidv4(),
-      text: obj.text,
-      ...(typeof obj.sourceSection === "string" ? { sourceSection: obj.sourceSection } : {}),
-      ...(Array.isArray(obj.tags) ? { tags: obj.tags as readonly string[] } : {}),
-    });
-  }
-  return facts;
+  return parseLLMResponse(response);
 }
