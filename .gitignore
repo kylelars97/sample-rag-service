@@ -1,3 +1,6 @@
+# Node (legacy)
+node_modules/
+
 # Deno
 # https://deno.com/
 
