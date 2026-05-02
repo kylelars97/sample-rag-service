@@ -38,7 +38,12 @@ const MAX_ITERATIONS = 10;
 // Hooks run inside the sandbox before the agent starts each iteration.
 // npm install ensures the sandbox always has fresh dependencies.
 const hooks = {
-  sandbox: { onSandboxReady: [{ command: "npm install" }] },
+  sandbox: {
+    onSandboxReady: [
+      { command: "echo '--- ENV CHECK ---' && env | grep -E 'OLLAMA|OPENCODE|GH_TOKEN' && echo '--- OPENCODE CHECK ---' && opencode run --model ollama/glm-5.1:cloud 'Say OK' && echo '--- END CHECK ---'" },
+      { command: "npm install" },
+    ],
+  },
 };
 
 // Copy node_modules from the host into the worktree before each sandbox
