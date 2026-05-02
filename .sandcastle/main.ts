@@ -61,7 +61,7 @@ const opencodeJson = (model: string): sandcastle.AgentProvider => ({
 const hooks = {
   sandbox: {
     onSandboxReady: [
-      { command: "npm install" },
+      { command: "[ -f package.json ] && npm install || true" },
     ],
   },
 };
