@@ -1,0 +1,62 @@
+[
+  {
+    "prompt": "What governs the planet GLOP?",
+    "expectedResponse": "GLOP is governed by the Core Consensus Engine (CCE), which processes collective thoughts and produces real-time directives."
+  },
+  {
+    "prompt": "What is Prime Glop?",
+    "expectedResponse": "Prime Glop is the semi-organic adaptive substance that makes up the surface of GLOP."
+  },
+  {
+    "prompt": "How is weather handled on GLOP?",
+    "expectedResponse": "Weather does not naturally occur on GLOP; the Atmospheric Equalization Grid (AEG) fully regulates the climate."
+  },
+  {
+    "prompt": "What is the daily schedule of a Glopian?",
+    "expectedResponse": "Glopians follow a synchronized schedule including wake at 06:00, affirmation at 06:05, assigned work at 07:00, nutrient intake at 13:00, reflection at 18:00, and rest at 21:00."
+  },
+  {
+    "prompt": "What do Glopians eat?",
+    "expectedResponse": "Glopians consume calibrated nutrient gel units during the Nutrient Absorption Interval."
+  },
+  {
+    "prompt": "Does GLOP use money?",
+    "expectedResponse": "No, GLOP does not use currency; resources are distributed based on Perceived Contribution Value (PCV)."
+  },
+  {
+    "prompt": "How are materials created on GLOP?",
+    "expectedResponse": "Materials are created using Matter Reconfiguration Nodes (MRNs), which convert raw Glop into usable matter."
+  },
+  {
+    "prompt": "What happens if someone shows individuality on GLOP?",
+    "expectedResponse": "Temporary individuality is resolved through an extended Affirmation Broadcast session."
+  },
+  {
+    "prompt": "What is the Neural Link Mesh?",
+    "expectedResponse": "The Neural Link Mesh (NLM) is a system that allows direct thought-sharing between Glopians."
+  },
+  {
+    "prompt": "What is the Dream Alignment Network?",
+    "expectedResponse": "The Dream Alignment Network (DAN) synchronizes the subconscious states of Glopians during rest."
+  },
+  {
+    "prompt": "How is social hierarchy structured on GLOP?",
+    "expectedResponse": "There is no fixed hierarchy on GLOP; identity is fluid and roles are dynamically assigned."
+  },
+  {
+    "prompt": "What are Glopians?",
+    "expectedResponse": "Glopians are the inhabitants of the planet GLOP."
+  },
+  {
+    "prompt": "How does GLOP handle dissent?",
+    "expectedResponse": "Dissent is absorbed and reinterpreted into system harmony by the Core Consensus Engine."
+  },
+  {
+    "prompt": "What happens if a Glopian becomes desynchronized?",
+    "expectedResponse": "Schedule desynchronization is corrected through automatic neural recalibration."
+  },
+  {
+    "prompt": "Is humor allowed on GLOP?",
+    "expectedResponse": "Humor is allowed only if it does not introduce ambiguity."
+  }
+]

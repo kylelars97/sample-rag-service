@@ -1,5 +1,13 @@
 # Coding Standards
 
+## Documentation
+
+- Should start with a quick summary
+- Should contain a quick start section with instructions to get developers started
+- Should contain definitions for all the environment variables
+- Should contain contribution guidelines
+- Should NOT be overly long
+
 ## Style
 
 - Use camelCase for variables and functions
