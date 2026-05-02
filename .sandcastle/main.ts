@@ -71,7 +71,7 @@ const copyToWorktree = ["node_modules"];
       // not write code.
       maxIterations: 1,
       // Opus for planning: dependency analysis benefits from deeper reasoning.
-      agent: sandcastle.opencode("ollama/glm-5.1"),
+      agent: sandcastle.opencode("ollama/glm-5.1:cloud"),
     promptFile: "./.sandcastle/plan-prompt.md",
     });
 
@@ -125,7 +125,7 @@ const copyToWorktree = ["node_modules"];
           const implement = await sandbox.run({
             name: "implementer",
             maxIterations: 100,
-            agent: sandcastle.opencode("ollama/glm-5.1"),
+            agent: sandcastle.opencode("ollama/glm-5.1:cloud"),
             promptFile: "./.sandcastle/implement-prompt.md",
             promptArgs: {
               TASK_ID: issue.id,
@@ -139,7 +139,7 @@ const copyToWorktree = ["node_modules"];
             const review = await sandbox.run({
               name: "reviewer",
               maxIterations: 1,
-              agent: sandcastle.opencode("ollama/glm-5.1"),
+              agent: sandcastle.opencode("ollama/glm-5.1:cloud"),
               promptFile: "./.sandcastle/review-prompt.md",
               promptArgs: {
                 BRANCH: issue.branch,
@@ -210,7 +210,7 @@ const copyToWorktree = ["node_modules"];
       sandbox: docker(),
       name: "merger",
       maxIterations: 1,
-      agent: sandcastle.opencode("ollama/glm-5.1"),
+      agent: sandcastle.opencode("ollama/glm-5.1:cloud"),
       promptFile: "./.sandcastle/merge-prompt.md",
       promptArgs: {
         // A markdown list of branch names, one per line.
