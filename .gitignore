@@ -1,6 +1,10 @@
 # Vendored dependencies
 vendor/
 
+# Python
+.venv/
+*.egg-info/
+
 # Node (legacy)
 node_modules/
 

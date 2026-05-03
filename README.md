@@ -102,7 +102,7 @@ Acceptance tests validate the RAG service end-to-end using the prompts defined i
 1. Start infrastructure services:
 
    ```sh
-   docker compose -f docker/docker-compose.yml up -d qdrant ollama
+   docker compose -f docker/docker-compose.yml up -d qdrant
    ```
 
 2. Pull the Ollama chat model (if not already pulled):
@@ -118,7 +118,7 @@ Acceptance tests validate the RAG service end-to-end using the prompts defined i
    deno task start
    ```
 
-### Run Acceptance Tests
+### Run Acceptance Tests (standalone)
 
 ```sh
 deno task test:acceptance
@@ -126,9 +126,9 @@ deno task test:acceptance
 
 This sends each prompt from `test/prompts.json` to the running RAG service and checks that the answers contain relevant terms from the expected responses. A 60% pass rate threshold is applied to account for LLM output variability.
 
-### Rhesis Integration (Advanced)
+### Rhesis Integration
 
-For LLM-as-judge evaluation using Rhesis, start the full Rhesis stack:
+For LLM-as-judge evaluation with results visible in the Rhesis UI, start the full Rhesis stack:
 
 ```sh
 docker compose -f docker/docker-compose.yml up -d
@@ -136,7 +136,7 @@ docker compose -f docker/docker-compose.yml up -d
 
 This starts Rhesis (backend, worker, frontend, PostgreSQL, Redis) alongside Qdrant and Ollama. The Rhesis frontend is available at `http://localhost:3001`.
 
-#### Rhesis API Key
+#### Setup
 
 The Rhesis stack requires an API key and a database encryption key. Set them in your `.env` file:
 
@@ -146,17 +146,29 @@ cp .env.example .env
 
 Then fill in the Rhesis section:
 
-- **`RHESIS_API_KEY`** — Create a free account at [https://app.rhesis.ai/](https://app.rhesis.ai/) and generate an API key from your dashboard.
+- **`RHESIS_API_KEY`** — Create a free account at [https://app.rhesis.ai/](https://app.rhesis.ai/) and generate an API key from your dashboard, or use the local token `rh-local-token` for self-hosted stacks.
 - **`DB_ENCRYPTION_KEY`**, **`JWT_SECRET_KEY`**, **`SESSION_SECRET_KEY`**, **`NEXTAUTH_SECRET`** — Generate each with:
   ```sh
   python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
   ```
 
-Then run the Python acceptance script:
+#### Run with Rhesis
+
+Set up a Python venv and run the acceptance script:
 
 ```sh
-pip install rhesis-sdk
+python3 -m venv .venv
+. .venv/bin/activate
+pip install requests
 python acceptance/run_acceptance.py
 ```
 
-This uses the Rhesis SDK with Ollama (`llama3`) as the observe LLM to judge whether each answer contains the expected information.
+The script reads `RHESIS_BASE_URL` (default `http://localhost:8080`) and `RHESIS_API_KEY` (default `rh-local-token`) from the environment. Override them if needed:
+
+```sh
+RHESIS_BASE_URL=http://localhost:8080 RHESIS_API_KEY=rh-local-token python acceptance/run_acceptance.py
+```
+
+It also requires the RAG service and Ollama to be running (see Prerequisites above).
+
+This creates a test set, endpoint, test configuration, and test run in Rhesis, then queries the RAG service directly and evaluates each answer with Ollama (`llama3`). Results are written back to the Rhesis database via the REST API and visible in the frontend at `http://localhost:3001/test-runs`.

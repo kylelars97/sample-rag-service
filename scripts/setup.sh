@@ -43,7 +43,27 @@ ensure_rhesis_repo() {
     git clone --depth 1 https://github.com/rhesis-ai/rhesis.git "${vendor_dir}/rhesis"
     info "Rhesis repo cloned."
   fi
+  apply_rhesis_patches "${vendor_dir}/rhesis"
   export RHESIS_REPO_PATH="${vendor_dir}/rhesis"
+}
+
+apply_rhesis_patches() {
+  local repo_dir="$1"
+  local patch_dir
+  patch_dir="$(cd "$(dirname "$0")/.." && pwd)/docker/patches"
+
+  info "Applying patches to rhesis repo..."
+
+  local cors_file="${repo_dir}/apps/backend/src/rhesis/backend/app/main.py"
+  if grep -q '"http://localhost:3001"' "${cors_file}" 2>/dev/null; then
+    info "CORS patch already applied."
+  elif grep -q '"http://localhost:3000"' "${cors_file}" 2>/dev/null; then
+    sed -i.bak 's|"http://localhost:3000",|"http://localhost:3000",\n        "http://localhost:3001",|' "${cors_file}"
+    rm -f "${cors_file}.bak"
+    info "Applied CORS Allow localhost:3001"
+  else
+    error "Could not find CORS allow_origins in ${cors_file}"
+  fi
 }
 
 start_services() {
