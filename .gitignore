@@ -1,3 +1,6 @@
+# Vendored dependencies
+vendor/
+
 # Node (legacy)
 node_modules/
 

@@ -64,18 +64,23 @@ curl http://localhost:3000/
 
 ## Environment Variables
 
-| Variable             | Default                     | Required | Description                                                                 |
-| -------------------- | --------------------------- | -------- | --------------------------------------------------------------------------- |
-| `OLLAMA_BASE_URL`    | `http://localhost:11434`    | No       | URL of the Ollama API server                                                |
-| `OLLAMA_CHAT_MODEL`  | `llama3`                    | No       | Ollama model used for chat/generation                                       |
-| `OLLAMA_EMBED_MODEL` | `nomic-embed-text`          | No       | Ollama model used for embedding text into vectors                           |
-| `QDRANT_URL`         | `http://localhost:6333`     | No       | URL of the Qdrant vector database instance                                  |
-| `QDRANT_COLLECTION`  | `facts`                     | No       | Name of the Qdrant collection to store and query fact embeddings            |
-| `PORT`               | `3000`                      | No       | Port the Deno HTTP server listens on                                        |
-| `SEED_DATA_PATH`     | `data/glop.md`             | No       | Path to the Markdown file ingested by `deno task ingest`                   |
-| `RAG_SERVICE_URL`   | `http://localhost:3000`     | No       | URL of the RAG service for acceptance tests                                |
+| Variable              | Default                     | Required | Description                                                                 |
+| --------------------- | --------------------------- | -------- | --------------------------------------------------------------------------- |
+| `OLLAMA_BASE_URL`     | `http://localhost:11434`    | No       | URL of the Ollama API server                                                |
+| `OLLAMA_CHAT_MODEL`   | `llama3`                    | No       | Ollama model used for chat/generation                                       |
+| `OLLAMA_EMBED_MODEL`  | `nomic-embed-text`          | No       | Ollama model used for embedding text into vectors                           |
+| `QDRANT_URL`          | `http://localhost:6333`     | No       | URL of the Qdrant vector database instance                                  |
+| `QDRANT_COLLECTION`   | `facts`                     | No       | Name of the Qdrant collection to store and query fact embeddings            |
+| `PORT`                | `3000`                      | No       | Port the Deno HTTP server listens on                                        |
+| `SEED_DATA_PATH`      | `data/glop.md`              | No       | Path to the Markdown file ingested by `deno task ingest`                   |
+| `RAG_SERVICE_URL`     | `http://localhost:3000`     | No       | URL of the RAG service for acceptance tests                                |
+| `RHESIS_API_KEY`      |                             | Yes*     | API key from [app.rhesis.ai](https://app.rhesis.ai/)                       |
+| `DB_ENCRYPTION_KEY`   |                             | Yes*     | Fernet-compatible key for Rhesis DB encryption                              |
+| `JWT_SECRET_KEY`      |                             | No*      | Secret for Rhesis JWT tokens                                                |
+| `SESSION_SECRET_KEY`  |                             | No*      | Secret for Rhesis sessions                                                  |
+| `NEXTAUTH_SECRET`     |                             | No*      | Secret for Rhesis frontend auth                                             |
 
-All variables have sensible defaults for local development, so copying `.env.example` to `.env` is enough to get started.
+\* Required only when running the Rhesis stack (`docker compose up -d`).
 
 ## Tasks
 
@@ -130,6 +135,22 @@ docker compose -f docker/docker-compose.yml up -d
 ```
 
 This starts Rhesis (backend, worker, frontend, PostgreSQL, Redis) alongside Qdrant and Ollama. The Rhesis frontend is available at `http://localhost:3001`.
+
+#### Rhesis API Key
+
+The Rhesis stack requires an API key and a database encryption key. Set them in your `.env` file:
+
+```sh
+cp .env.example .env
+```
+
+Then fill in the Rhesis section:
+
+- **`RHESIS_API_KEY`** — Create a free account at [https://app.rhesis.ai/](https://app.rhesis.ai/) and generate an API key from your dashboard.
+- **`DB_ENCRYPTION_KEY`**, **`JWT_SECRET_KEY`**, **`SESSION_SECRET_KEY`**, **`NEXTAUTH_SECRET`** — Generate each with:
+  ```sh
+  python3 -c "import base64,os; print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
+  ```
 
 Then run the Python acceptance script:
 

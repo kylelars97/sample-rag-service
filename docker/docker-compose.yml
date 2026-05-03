@@ -50,9 +50,11 @@ services:
 
   rhesis-backend:
     build:
-      context: https://github.com/rhesis-ai/rhesis.git
+      context: ${RHESIS_REPO_PATH:-../vendor/rhesis}
       dockerfile: apps/backend/Dockerfile
       target: backend
+    user: root
+    entrypoint: ["sh", "-c", "install -d -o rhesis-user -g rhesis-user /app/apps/backend/logs /var/log/celery && exec su rhesis-user -c ./start.sh"]
     environment:
       SQLALCHEMY_DATABASE_URL: postgresql://rhesis-user:rhesis-password@rhesis-postgres:5432/rhesis-db
       SQLALCHEMY_DB_DRIVER: postgresql
@@ -61,7 +63,7 @@ services:
       SQLALCHEMY_DB_PASS: rhesis-password
       SQLALCHEMY_DB_HOST: rhesis-postgres
       SQLALCHEMY_DB_NAME: rhesis-db
-      DB_ENCRYPTION_KEY: ""
+      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY:?Set DB_ENCRYPTION_KEY in .env}
       REDIS_URL: redis://:rhesis-redis-pass@rhesis-redis:6379/0
       BROKER_URL: redis://:rhesis-redis-pass@rhesis-redis:6379/0
       CELERY_RESULT_BACKEND: redis://:rhesis-redis-pass@rhesis-redis:6379/1
@@ -70,17 +72,19 @@ services:
       LOG_LEVEL: DEBUG
       QUICK_START: "true"
       RHESIS_BASE_URL: https://api.rhesis.ai
-      RHESIS_API_KEY: ""
+      RHESIS_API_KEY: ${RHESIS_API_KEY:-}
       RHESIS_CONNECTOR_DISABLED: "true"
       FRONTEND_URL: http://localhost:3001
       BACKEND_URL: http://rhesis-backend:8080
       DEFAULT_GENERATION_MODEL: "ollama/llama3"
       DEFAULT_EVALUATION_MODEL: "ollama/llama3"
-      DEFAULT_EMBEDDING_MODEL: "ollama/nomic-embed-text"
-      JWT_SECRET_KEY: local-dev-jwt-secret
-      SESSION_SECRET_KEY: local-dev-session-secret
+      DEFAULT_EMBEDD_MODEL: "ollama/nomic-embed-text"
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-local-dev-jwt-secret}
+      SESSION_SECRET_KEY: ${SESSION_SECRET_KEY:-local-dev-session-secret}
     ports:
       - "8080:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       rhesis-postgres:
         condition: service_healthy
@@ -98,9 +102,11 @@ services:
 
   rhesis-worker:
     build:
-      context: https://github.com/rhesis-ai/rhesis.git
+      context: ${RHESIS_REPO_PATH:-../vendor/rhesis}
       dockerfile: apps/backend/Dockerfile
       target: worker
+    user: root
+    entrypoint: ["sh", "-c", "install -d -o rhesis-user -g rhesis-user /app/apps/backend/logs /var/log/celery && exec su rhesis-user -c /app/start.sh"]
     environment:
       SQLALCHEMY_DATABASE_URL: postgresql://rhesis-user:rhesis-password@rhesis-postgres:5432/rhesis-db
       SQLALCHEMY_DB_DRIVER: postgresql
@@ -109,7 +115,7 @@ services:
       SQLALCHEMY_DB_PASS: rhesis-password
       SQLALCHEMY_DB_HOST: rhesis-postgres
       SQLALCHEMY_DB_NAME: rhesis-db
-      DB_ENCRYPTION_KEY: ""
+      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY:?Set DB_ENCRYPTION_KEY in .env}
       REDIS_URL: redis://:rhesis-redis-pass@rhesis-redis:6379/0
       BROKER_URL: redis://:rhesis-redis-pass@rhesis-redis:6379/0
       CELERY_RESULT_BACKEND: redis://:rhesis-redis-pass@rhesis-redis:6379/1
@@ -117,7 +123,7 @@ services:
       WORKER_ENV: local
       LOG_LEVEL: INFO
       RHESIS_BASE_URL: https://api.rhesis.ai
-      RHESIS_API_KEY: ""
+      RHESIS_API_KEY: ${RHESIS_API_KEY:-}
       RHESIS_CONNECTOR_DISABLED: "true"
       BACKEND_URL: http://rhesis-backend:8080
       DEFAULT_GENERATION_MODEL: "ollama/llama3"
@@ -125,6 +131,8 @@ services:
       DEFAULT_EMBEDDING_MODEL: "ollama/nomic-embed-text"
     ports:
       - "8081:8081"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       rhesis-postgres:
         condition: service_healthy
@@ -133,11 +141,17 @@ services:
     networks:
       - rhesis-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health/basic"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   rhesis-frontend:
     build:
-      context: https://github.com/rhesis-ai/rhesis.git
-      dockerfile: apps/frontend/Dockerfile
+      context: ${RHESIS_REPO_PATH:-../vendor/rhesis}/apps/frontend
+      dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
         NEXT_PUBLIC_QUICK_START: "true"
@@ -145,8 +159,8 @@ services:
       ENVIRONMENT: local
       FRONTEND_ENV: local
       RHESIS_BASE_URL: https://api.rhesis.ai
-      RHESIS_API_KEY: ""
-      NEXTAUTH_SECRET: local-dev-nextauth-secret
+      RHESIS_API_KEY: ${RHESIS_API_KEY:-}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-local-dev-nextauth-secret}
       NEXTAUTH_URL: http://localhost:3001
       NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
       NEXT_PUBLIC_QUICK_START: "true"
@@ -160,6 +174,12 @@ services:
     networks:
       - rhesis-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/auth/session"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
   qdrant_data:

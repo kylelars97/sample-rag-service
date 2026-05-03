@@ -32,10 +32,24 @@ check_docker() {
   fi
 }
 
-start_qdrant() {
-  info "Starting Qdrant..."
-  docker compose -f docker/docker-compose.yml up -d
-  info "Qdrant started."
+ensure_rhesis_repo() {
+  local vendor_dir
+  vendor_dir="$(cd "$(dirname "$0")/.." && pwd)/vendor"
+  if [ -d "${vendor_dir}/rhesis" ]; then
+    info "Rhesis repo found at ${vendor_dir}/rhesis"
+  else
+    info "Cloning rhesis repo into ${vendor_dir}..."
+    mkdir -p "${vendor_dir}"
+    git clone --depth 1 https://github.com/rhesis-ai/rhesis.git "${vendor_dir}/rhesis"
+    info "Rhesis repo cloned."
+  fi
+  export RHESIS_REPO_PATH="${vendor_dir}/rhesis"
+}
+
+start_services() {
+  info "Starting services..."
+  docker compose --env-file .env -f docker/docker-compose.yml up -d
+  info "Services started."
 }
 
 check_ollama() {
@@ -80,7 +94,7 @@ usage() {
   echo ""
   echo "Commands:"
   echo "  all       Run full setup (default)"
-  echo "  qdrant    Start Qdrant only"
+  echo "  services  Start Docker services (ensures rhesis repo)"
   echo "  ollama    Install Ollama and pull models"
   echo "  ingest    Ingest seed data"
   echo "  start     Start the server"
@@ -95,16 +109,18 @@ main() {
       info "Running full setup..."
       check_deno
       check_docker
-      start_qdrant
+      ensure_rhesis_repo
+      start_services
       check_ollama
       pull_models
       configure_env
       ingest_data
       start_server
       ;;
-    qdrant)
+    services)
       check_docker
-      start_qdrant
+      ensure_rhesis_repo
+      start_services
       ;;
     ollama)
       check_ollama
